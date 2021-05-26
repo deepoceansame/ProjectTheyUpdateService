@@ -1,34 +1,39 @@
 package Tools;
 
 import java.util.ArrayList;
+import java.util.List;
 
 public class MultiChooseIntGenerator {
     public static void main(String[] args) {
-        int[] weekList1=new int[]{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16};
-        int[] weekList2=new int[]{14,16};
-        System.out.println(weekIntGenerator(weekList1));
-        String s1="11-11";
-        String s2="3-4";
-        System.out.println(classTimeIntGenerator(s2));
+        short a=1;
+        short b=2;
+        short c=3;
+        short d=4;
+        short e=5;
+        short f=6;
+        short g=7;
+        short h=8;
+        short i=9;
+        short j=10;
+        short k=11;
+        List<Short> list=List.of(a,b,c,d,e,f,g,h);
+        System.out.println(weekIntGenerator(list));
+        System.out.println(classTimeIntGenerator(a,c));
     }
 
-    public static int weekIntGenerator(int[] weekList){
+    public static int weekIntGenerator(List<Short> weekList){
         int ans=0;
-        for (int i=0;i<weekList.length;i++){
-            ans+=Math.pow(2,weekList[i]);
+        for (short a:weekList){
+            ans+=Math.pow(2,a);
         }
         return ans;
     }
 
-    public static int classTimeIntGenerator(String s){
+    public static int classTimeIntGenerator(short st,short en){
         int ans=0;
-        String[] ss=s.split("-");
-        int a=Integer.parseInt(ss[0]);
-        int b=Integer.parseInt(ss[1]);
-        for (int i=a;i<b+1;i++){
+        for (short i=st;i<en+1;i++){
             ans+=Math.pow(2,i);
         }
-
         return ans;
     }
 }

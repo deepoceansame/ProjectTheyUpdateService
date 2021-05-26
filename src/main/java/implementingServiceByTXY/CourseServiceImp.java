@@ -1,4 +1,5 @@
 package implementingServiceByTXY;
+import Tools.MultiChooseIntGenerator;
 import cn.edu.sustech.cs307.dto.Course;
 import cn.edu.sustech.cs307.dto.CourseSection;
 import cn.edu.sustech.cs307.dto.CourseSectionClass;
@@ -23,18 +24,18 @@ public class CourseServiceImp implements CourseService{
     public void addCourse(String courseId, String courseName, int credit, int classHour, Course.CourseGrading grading, @Nullable Prerequisite coursePrerequisite) {
         try(
                 Connection conn=SQLDataSource.getInstance().getSQLConnection();
-                PreparedStatement ptmt =conn.prepareStatement("insert into " +
+                PreparedStatement addCoursePtmt =conn.prepareStatement("insert into " +
                         "course(courseId,courseName,credit,classHour,courseGrading,pre) " +
                         "values(?,?,?,?,?,?)")
             )
         {
-            ptmt.setString(1,courseId);
-            ptmt.setString(2,courseName);
-            ptmt.setInt(3,credit);
-            ptmt.setInt(4,classHour);
-            ptmt.setString(5,grading.toString());
-            ptmt.setString(6,getPreString(coursePrerequisite));
-            ptmt.executeUpdate();
+            addCoursePtmt .setString(1,courseId);
+            addCoursePtmt .setString(2,courseName);
+            addCoursePtmt .setInt(3,credit);
+            addCoursePtmt .setInt(4,classHour);
+            addCoursePtmt .setString(5,grading.toString());
+            addCoursePtmt .setString(6,getPreString(coursePrerequisite));
+            addCoursePtmt .executeUpdate();
         }
         catch (SQLException e){
             e.printStackTrace();
@@ -66,11 +67,30 @@ public class CourseServiceImp implements CourseService{
         cimp.addCourse("MA101","微积分",4,16, Course.CourseGrading.PASS_OF_FAIL ,calculus);
 */
 
-        CourseServiceImp dimp=new CourseServiceImp();
+ /*       CourseServiceImp dimp=new CourseServiceImp();
         dimp.addCourseSection("MA101",3,"中文二班",100);
-        dimp.addCourseSection("MA101",4,"中文二班",100);
+        dimp.addCourseSection("MA101",4,"中文二班",100);*/
 
 
+        /*try(
+                Connection conn=SQLDataSource.getInstance().getSQLConnection();
+                PreparedStatement ptmt=conn.prepareStatement("insert into testserial(val) values (111)");
+                )
+        {
+            ptmt.executeUpdate();
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }*/
+
+        CourseServiceImp eimp=new CourseServiceImp();
+        short a=1;
+        short b=2;
+        short c=3;
+        short d=4;
+        short e=5;
+        eimp.addCourseSectionClass(1,110,DayOfWeek.FRIDAY,List.of(a,b,c),b,d,"B");
+        eimp.addCourseSectionClass(6,110,DayOfWeek.FRIDAY,List.of(c,d,e),d,e,"A");
 
 
     }
@@ -103,7 +123,7 @@ public class CourseServiceImp implements CourseService{
     }
 
     @Override
-    public int addCourseSection(String courseId, int semesterId, String sectionName, int totalCapacity) {
+    public synchronized int addCourseSection(String courseId, int semesterId, String sectionName, int totalCapacity) {
         try(
                 Connection conn=SQLDataSource.getInstance().getSQLConnection();
                 PreparedStatement idptmt=conn.prepareStatement("select nextval('section_sectionid_seq')");
@@ -134,8 +154,47 @@ public class CourseServiceImp implements CourseService{
     }
 
     @Override
-    public int addCourseSectionClass(int sectionId, int instructorId, DayOfWeek dayOfWeek, List<Short> weekList, short classStart, short classEnd, String location) {
-        return 0;
+    public synchronized int addCourseSectionClass(int sectionId, int instructorId, DayOfWeek dayOfWeek, List<Short> weekList, short classStart, short classEnd, String location) {
+        try(
+                Connection conn=SQLDataSource.getInstance().getSQLConnection();
+                PreparedStatement getSectionSemsterIdPtmt=conn.prepareStatement("select semesterid from section where sectionid=?");
+                PreparedStatement idptmt=conn.prepareStatement("select nextval('class_classid_seq')");
+                PreparedStatement insptmt=conn.prepareStatement("insert into class" +
+                        "(sectionId, dayOfWeek, weekList,classTime,semesterId,location) VALUES(?,?,?,?,?,?)");
+                PreparedStatement setptmt=conn.prepareStatement("select setval('class_classid_seq',?)");
+                PreparedStatement teachInsertPtmt=conn.prepareStatement("insert into teach " +
+                        "(instructorId,classId) values(?,?)");
+        )
+        {
+            int semesterid=0;
+            getSectionSemsterIdPtmt.setInt(1,sectionId);
+            ResultSet res=getSectionSemsterIdPtmt.executeQuery();
+            while (res.next()){
+                semesterid=res.getInt(1);
+            }
+            insptmt.setInt(1,sectionId);
+            insptmt.setInt(2,dayOfWeek.getValue());
+            insptmt.setInt(3, MultiChooseIntGenerator.weekIntGenerator(weekList));
+            insptmt.setInt(4,MultiChooseIntGenerator.classTimeIntGenerator(classStart,classEnd));
+            insptmt.setInt(5,semesterid);
+            insptmt.setString(6,location);
+            insptmt.executeUpdate();
+            int id=0;
+            ResultSet nowid=idptmt.executeQuery();
+            while (nowid.next()){
+                id=nowid.getInt(1);
+            }
+            teachInsertPtmt.setInt(1,instructorId);
+            teachInsertPtmt.setInt(2,id-1);
+            teachInsertPtmt.executeUpdate();
+            setptmt.setInt(1,id-1);
+            setptmt.executeQuery();
+            return id-1;
+        }
+        catch (SQLException e) {
+            e.printStackTrace();
+            return -1;
+        }
     }
 
     @Override
