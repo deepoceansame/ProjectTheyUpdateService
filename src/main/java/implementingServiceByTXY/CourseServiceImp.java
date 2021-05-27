@@ -8,15 +8,15 @@ import cn.edu.sustech.cs307.dto.prerequisite.AndPrerequisite;
 import cn.edu.sustech.cs307.dto.prerequisite.CoursePrerequisite;
 import cn.edu.sustech.cs307.dto.prerequisite.OrPrerequisite;
 import cn.edu.sustech.cs307.dto.prerequisite.Prerequisite;
+import cn.edu.sustech.cs307.exception.EntityNotFoundException;
+import cn.edu.sustech.cs307.exception.IntegrityViolationException;
 import cn.edu.sustech.cs307.service.CourseService;
 import cn.edu.sustech.cs307.database.SQLDataSource;
 
 import javax.annotation.Nullable;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.time.DayOfWeek;
+import java.util.ArrayList;
 import java.util.List;
 
 public class CourseServiceImp implements CourseService{
@@ -33,12 +33,16 @@ public class CourseServiceImp implements CourseService{
             addCoursePtmt .setString(2,courseName);
             addCoursePtmt .setInt(3,credit);
             addCoursePtmt .setInt(4,classHour);
-            addCoursePtmt .setString(5,grading.toString());
+            if (grading.equals(Course.CourseGrading.PASS_OR_FAIL))
+                addCoursePtmt .setInt(5,1);
+            else
+                addCoursePtmt .setInt(5,2);
             addCoursePtmt .setString(6,getPreString(coursePrerequisite));
             addCoursePtmt .executeUpdate();
         }
         catch (SQLException e){
             e.printStackTrace();
+            throw new IntegrityViolationException();
         }
     }
 
@@ -58,14 +62,13 @@ public class CourseServiceImp implements CourseService{
         System.out.println(s);
         System.out.println(s.replaceAll("\\*"," AND ").replaceAll("\\+"," OR "));*/
 
-       /* Prerequisite calculus = new OrPrerequisite(List.of(
+        Prerequisite calculus = new OrPrerequisite(List.of(
                 new CoursePrerequisite("MA101A"),
                 new CoursePrerequisite("MA101B")
         ));
 
         CourseServiceImp cimp=new CourseServiceImp();
-        cimp.addCourse("MA101","微积分",4,16, Course.CourseGrading.PASS_OF_FAIL ,calculus);
-*/
+        cimp.addCourse("MA101","微积分",4,16, Course.CourseGrading.PASS_OR_FAIL ,calculus);
 
  /*       CourseServiceImp dimp=new CourseServiceImp();
         dimp.addCourseSection("MA101",3,"中文二班",100);
@@ -83,14 +86,14 @@ public class CourseServiceImp implements CourseService{
             e.printStackTrace();
         }*/
 
-        CourseServiceImp eimp=new CourseServiceImp();
+       /* CourseServiceImp eimp=new CourseServiceImp();
         short a=1;
         short b=2;
         short c=3;
         short d=4;
         short e=5;
         eimp.addCourseSectionClass(1,110,DayOfWeek.FRIDAY,List.of(a,b,c),b,d,"B");
-        eimp.addCourseSectionClass(6,110,DayOfWeek.FRIDAY,List.of(c,d,e),d,e,"A");
+        eimp.addCourseSectionClass(6,110,DayOfWeek.FRIDAY,List.of(c,d,e),d,e,"B");*/
 
 
     }
@@ -149,7 +152,7 @@ public class CourseServiceImp implements CourseService{
         }
         catch(SQLException e){
             e.printStackTrace();
-            return -1;
+            throw new IntegrityViolationException();
         }
     }
 
@@ -166,6 +169,7 @@ public class CourseServiceImp implements CourseService{
                         "(instructorId,classId) values(?,?)");
         )
         {
+            if (classEnd<classStart) throw new IntegrityViolationException();
             int semesterid=0;
             getSectionSemsterIdPtmt.setInt(1,sectionId);
             ResultSet res=getSectionSemsterIdPtmt.executeQuery();
@@ -192,33 +196,137 @@ public class CourseServiceImp implements CourseService{
             return id-1;
         }
         catch (SQLException e) {
-            e.printStackTrace();
-            return -1;
+            throw new IntegrityViolationException();
         }
     }
 
     @Override
     public void removeCourse(String courseId) {
-
+        try(
+                Connection conn=SQLDataSource.getInstance().getSQLConnection();
+                PreparedStatement selectCoursePtmt=conn.prepareStatement("select * from course where courseId=?");
+                PreparedStatement removeCoursePtmt=conn.prepareStatement("delete from course where courseId=?");
+                )
+        {
+            String courseId_temp="tingting";
+            selectCoursePtmt.setString(1,courseId);
+            ResultSet set=selectCoursePtmt.executeQuery();
+            while (set.next()){
+                courseId_temp=set.getString("courseId");
+            }
+            if (courseId_temp.equals("tingting")){
+                throw new EntityNotFoundException();
+            }
+            else{
+                removeCoursePtmt.setString(1,courseId);
+                removeCoursePtmt.executeUpdate();
+            }
+        }
+        catch (SQLException e){
+            e.printStackTrace();
+        }
     }
 
     @Override
     public void removeCourseSection(int sectionId) {
-
+        try(
+                Connection conn=SQLDataSource.getInstance().getSQLConnection();
+                PreparedStatement selectSectionPtmt=conn.prepareStatement("select * from section where sectionId=?");
+                PreparedStatement removeSectionPtmt=conn.prepareStatement("delete from section where sectionId=?");
+                )
+        {
+            int sectionId_temp=-1;
+            selectSectionPtmt.setInt(1,sectionId);
+            ResultSet set=selectSectionPtmt.executeQuery();
+            while (set.next()){
+                sectionId_temp=set.getInt("sectionId");
+            }
+            if (sectionId_temp==-1){
+                throw new EntityNotFoundException();
+            }
+            else{
+                removeSectionPtmt.setInt(1,sectionId);
+                removeSectionPtmt.executeUpdate();
+            }
+        }
+        catch(SQLException e){
+            e.printStackTrace();
+        }
     }
 
     @Override
     public void removeCourseSectionClass(int classId) {
-
+        try(
+                Connection conn=SQLDataSource.getInstance().getSQLConnection();
+                PreparedStatement selectClassPtmt=conn.prepareStatement("select * from class where classId=?");
+                PreparedStatement removeClassPtmt=conn.prepareStatement("delete from class where classId=?");
+        )
+        {
+            int classId_temp=-1;
+            selectClassPtmt.setInt(1,classId);
+            ResultSet set=selectClassPtmt.executeQuery();
+            while (set.next()){
+                classId_temp=set.getInt("classId");
+            }
+            if (classId_temp==-1){
+                throw new EntityNotFoundException();
+            }
+            else{
+                removeClassPtmt.setInt(1,classId);
+                removeClassPtmt.executeUpdate();
+            }
+        }
+        catch(SQLException e){
+            e.printStackTrace();
+        }
     }
 
     @Override
     public List<Course> getAllCourses() {
-        return null;
+        try(
+                Connection conn=SQLDataSource.getInstance().getSQLConnection();
+                PreparedStatement getAllCoursesPtmt=conn.prepareStatement("select * from course");
+                )
+        {
+            ArrayList<Course> courses=new ArrayList<>();
+            ResultSet set=getAllCoursesPtmt.executeQuery();
+            int grading=-1;
+            while (set.next()){
+                Course course=new Course();
+                course.id=set.getString("CourseId");
+                course.name=set.getString("courseName");
+                course.credit=set.getInt("credit");
+                course.classHour=set.getInt("classHour");
+                grading=set.getInt("courseGrading");
+                if (grading==1){
+                    course.grading=Course.CourseGrading.PASS_OR_FAIL;
+                }
+                else {
+                    course.grading=Course.CourseGrading.HUNDRED_MARK_SCORE;
+                }
+                courses.add(course);
+            }
+            return courses;
+        }
+        catch (SQLException e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 
     @Override
     public List<CourseSection> getCourseSectionsInSemester(String courseId, int semesterId) {
+        try(
+                Connection conn=SQLDataSource.getInstance().getSQLConnection();
+                PreparedStatement selectCoursePtmt=conn.prepareStatement("select * from course where courseId=?");
+                PreparedStatement selectSemesterPtmt=conn.prepareStatement("select * from semester where semesterId=?");
+                PreparedStatement getCourseSectionInSemesterPtmt=conn.prepareStatement("select * from ")
+                )
+        {
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
         return null;
     }
 
