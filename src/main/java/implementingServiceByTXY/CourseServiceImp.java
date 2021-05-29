@@ -1,9 +1,7 @@
 package implementingServiceByTXY;
+import Tools.IntTox;
 import Tools.MultiChooseIntGenerator;
-import cn.edu.sustech.cs307.dto.Course;
-import cn.edu.sustech.cs307.dto.CourseSection;
-import cn.edu.sustech.cs307.dto.CourseSectionClass;
-import cn.edu.sustech.cs307.dto.Student;
+import cn.edu.sustech.cs307.dto.*;
 import cn.edu.sustech.cs307.dto.prerequisite.AndPrerequisite;
 import cn.edu.sustech.cs307.dto.prerequisite.CoursePrerequisite;
 import cn.edu.sustech.cs307.dto.prerequisite.OrPrerequisite;
@@ -37,7 +35,10 @@ public class CourseServiceImp implements CourseService{
                 addCoursePtmt .setInt(5,1);
             else
                 addCoursePtmt .setInt(5,2);
-            addCoursePtmt .setString(6,getPreString(coursePrerequisite));
+            if (coursePrerequisite!=null)
+                addCoursePtmt .setString(6,getPreString(coursePrerequisite));
+            else
+                addCoursePtmt.setString(6,null);
             addCoursePtmt .executeUpdate();
         }
         catch (SQLException e){
@@ -62,13 +63,11 @@ public class CourseServiceImp implements CourseService{
         System.out.println(s);
         System.out.println(s.replaceAll("\\*"," AND ").replaceAll("\\+"," OR "));*/
 
-        Prerequisite calculus = new OrPrerequisite(List.of(
+      /*  Prerequisite calculus = new OrPrerequisite(List.of(
                 new CoursePrerequisite("MA101A"),
                 new CoursePrerequisite("MA101B")
-        ));
+        ));*/
 
-        CourseServiceImp cimp=new CourseServiceImp();
-        cimp.addCourse("MA101","微积分",4,16, Course.CourseGrading.PASS_OR_FAIL ,calculus);
 
  /*       CourseServiceImp dimp=new CourseServiceImp();
         dimp.addCourseSection("MA101",3,"中文二班",100);
@@ -86,15 +85,30 @@ public class CourseServiceImp implements CourseService{
             e.printStackTrace();
         }*/
 
-       /* CourseServiceImp eimp=new CourseServiceImp();
+        CourseServiceImp eimp=new CourseServiceImp();
         short a=1;
         short b=2;
         short c=3;
         short d=4;
         short e=5;
-        eimp.addCourseSectionClass(1,110,DayOfWeek.FRIDAY,List.of(a,b,c),b,d,"B");
-        eimp.addCourseSectionClass(6,110,DayOfWeek.FRIDAY,List.of(c,d,e),d,e,"B");*/
+        System.out.println(eimp.addCourseSectionClass(2,111,DayOfWeek.SUNDAY,List.of(a,b,c,d,e),a,e,"A"));
+       /* CourseServiceImp kimp=new CourseServiceImp();
+        kimp.removeCourse("MA101");*/
 
+     /*   CourseServiceImp wimp=new CourseServiceImp();
+        List<CourseSectionClass> list=wimp.getCourseSectionClasses(3);
+        for (CourseSectionClass c:list){
+            System.out.println(c.id+" "+c.instructor.id);*/
+
+       /* CourseServiceImp limp=new CourseServiceImp();
+        CourseSection section= limp.getCourseSectionByClass(5);
+        System.out.println(section.id+" "+section.name);*/
+
+       /* CourseServiceImp oimp=new CourseServiceImp();
+        oimp.addCourse("MD101","魔法导论",10,50,Course.CourseGrading.HUNDRED_MARK_SCORE,null);*/
+
+//        CourseServiceImp jimp=new CourseServiceImp();
+//        jimp.removeCourseSectionClass(3);
 
     }
 
@@ -163,25 +177,61 @@ public class CourseServiceImp implements CourseService{
                 PreparedStatement getSectionSemsterIdPtmt=conn.prepareStatement("select semesterid from section where sectionid=?");
                 PreparedStatement idptmt=conn.prepareStatement("select nextval('class_classid_seq')");
                 PreparedStatement insptmt=conn.prepareStatement("insert into class" +
-                        "(sectionId, dayOfWeek, weekList,classTime,semesterId,location) VALUES(?,?,?,?,?,?)");
+                        "(sectionId, dayOfWeek, weekList,classTime,location) VALUES(?,?,?,?,?)");
                 PreparedStatement setptmt=conn.prepareStatement("select setval('class_classid_seq',?)");
                 PreparedStatement teachInsertPtmt=conn.prepareStatement("insert into teach " +
                         "(instructorId,classId) values(?,?)");
+                PreparedStatement executeNoCoincidencePtmt=conn.prepareStatement("select noCoincidenceAboutTeach(?,?,?,?,?,?)");
+                PreparedStatement executeNoCoinAboutClassPtmt=conn.prepareStatement("select noCoinAboutClass(?,?,?,?,?)")
+
         )
         {
             if (classEnd<classStart) throw new IntegrityViolationException();
-            int semesterid=0;
+            int semesterid=-1;
             getSectionSemsterIdPtmt.setInt(1,sectionId);
             ResultSet res=getSectionSemsterIdPtmt.executeQuery();
             while (res.next()){
                 semesterid=res.getInt(1);
             }
+            if (semesterid==-1){
+                throw new IntegrityViolationException();
+            }
+            int weekListInt=MultiChooseIntGenerator.weekIntGenerator(weekList);
+            int classTimeInt=MultiChooseIntGenerator.classTimeIntGenerator(classStart,classEnd);
+            executeNoCoincidencePtmt.setInt(1,instructorId);
+            executeNoCoincidencePtmt.setInt(2,dayOfWeek.getValue());
+            executeNoCoincidencePtmt.setInt(3,semesterid);
+            executeNoCoincidencePtmt.setInt(4,weekListInt);
+            executeNoCoincidencePtmt.setInt(5,classTimeInt);
+            executeNoCoincidencePtmt.setString(6,location);
+            ResultSet checkCoin=executeNoCoincidencePtmt.executeQuery();
+            boolean canpass=false;
+            while (checkCoin.next()){
+                canpass=checkCoin.getBoolean(1);
+            }
+            if (!canpass){
+                throw new IntegrityViolationException();
+            }
+
+            executeNoCoinAboutClassPtmt.setInt(1,semesterid);
+            executeNoCoinAboutClassPtmt.setInt(2,weekListInt);
+            executeNoCoinAboutClassPtmt.setInt(3,dayOfWeek.getValue());
+            executeNoCoinAboutClassPtmt.setInt(4,classTimeInt);
+            executeNoCoinAboutClassPtmt.setString(5,location);
+            checkCoin=executeNoCoinAboutClassPtmt.executeQuery();
+            canpass=false;
+            while (checkCoin.next()){
+                canpass=checkCoin.getBoolean(1);
+            }
+            if (!canpass){
+                throw new IntegrityViolationException();
+            }
+
             insptmt.setInt(1,sectionId);
             insptmt.setInt(2,dayOfWeek.getValue());
-            insptmt.setInt(3, MultiChooseIntGenerator.weekIntGenerator(weekList));
-            insptmt.setInt(4,MultiChooseIntGenerator.classTimeIntGenerator(classStart,classEnd));
-            insptmt.setInt(5,semesterid);
-            insptmt.setString(6,location);
+            insptmt.setInt(3, weekListInt);
+            insptmt.setInt(4,classTimeInt);
+            insptmt.setString(5,location);
             insptmt.executeUpdate();
             int id=0;
             ResultSet nowid=idptmt.executeQuery();
@@ -320,11 +370,42 @@ public class CourseServiceImp implements CourseService{
                 Connection conn=SQLDataSource.getInstance().getSQLConnection();
                 PreparedStatement selectCoursePtmt=conn.prepareStatement("select * from course where courseId=?");
                 PreparedStatement selectSemesterPtmt=conn.prepareStatement("select * from semester where semesterId=?");
-                PreparedStatement getCourseSectionInSemesterPtmt=conn.prepareStatement("select * from ")
+                PreparedStatement getCourseSectionInSemesterPtmt=conn.prepareStatement("select * from section where courseId=? and semesterId=?");
                 )
         {
-
-        } catch (SQLException e) {
+            String courseId_temp="tingting";
+            selectCoursePtmt.setString(1,courseId);
+            ResultSet set=selectCoursePtmt.executeQuery();
+            while (set.next()){
+                courseId_temp=set.getString("courseId");
+            }
+            if (courseId_temp.equals("tingting")){
+                throw new EntityNotFoundException();
+            }
+            selectSemesterPtmt.setInt(1,semesterId);
+            int semesterid=-1;
+            set=selectSemesterPtmt.executeQuery();
+            while (set.next()){
+                semesterid=set.getInt(1);
+            }
+            if (semesterid==-1){
+                throw new EntityNotFoundException();
+            }
+            getCourseSectionInSemesterPtmt.setString(1,courseId);
+            getCourseSectionInSemesterPtmt.setInt(1,semesterId);
+            set=getCourseSectionInSemesterPtmt.executeQuery();
+            ArrayList<CourseSection> sections =new ArrayList<>();
+            while (set.next()){
+                CourseSection section=new CourseSection();
+                section.id=set.getInt("sectionId");
+                section.name=set.getString("sectionName");
+                section.totalCapacity=set.getInt("totalCapacity");
+                section.leftCapacity=set.getInt("leftCapacity");
+                sections.add(section);
+            }
+            return sections;
+        }
+        catch (SQLException e) {
             e.printStackTrace();
         }
         return null;
@@ -332,17 +413,133 @@ public class CourseServiceImp implements CourseService{
 
     @Override
     public Course getCourseBySection(int sectionId) {
-        return null;
+        try(
+                Connection conn=SQLDataSource.getInstance().getSQLConnection();
+                PreparedStatement selectSectionPtmt=conn.prepareStatement("select * from section where sectionId=?");
+                PreparedStatement selectCoursePtmt=conn.prepareStatement("select * from course where courseId=?")
+                )
+        {
+            String courseId="tingting";
+            selectSectionPtmt.setInt(1,sectionId);
+            ResultSet set=selectSectionPtmt.executeQuery();
+            while (set.next()){
+                courseId=set.getString("courseId");
+            }
+            if (courseId.equals("tingting")){
+                throw new EntityNotFoundException();
+            }
+            Course course=new Course();
+            selectCoursePtmt.setString(1,courseId);
+            set=selectCoursePtmt.executeQuery();
+            int grading=-1;
+            while (set.next()){
+                course.id=courseId;
+                course.name=set.getString("courseName");
+                course.credit=set.getInt("credit");
+                course.classHour=set.getInt("classHour");
+                grading=set.getInt("courseGrading");
+                if (grading==1){
+                    course.grading=Course.CourseGrading.PASS_OR_FAIL;
+                }
+                else {
+                    course.grading=Course.CourseGrading.HUNDRED_MARK_SCORE;
+                }
+            }
+            return course;
+        }
+        catch (SQLException e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 
     @Override
     public List<CourseSectionClass> getCourseSectionClasses(int sectionId) {
-        return null;
+        try(
+                Connection conn=SQLDataSource.getInstance().getSQLConnection();
+                PreparedStatement selectSectionPtmt=conn.prepareStatement("select * from section where sectionId=?");
+                PreparedStatement getCourseSectionClassesPtmt=conn.prepareStatement("select * from class where sectionId=?");
+                PreparedStatement getInstructorPtmt=conn.prepareStatement(
+                        "select *\n" +
+                        "from (\n" +
+                        "        select *\n" +
+                        "        from teach\n" +
+                        "        where classId=?\n" +
+                        "     ) as insid join instructor on insid.instructorId=instructor.instructorId")
+                )
+        {
+
+            ArrayList<CourseSectionClass> list=new ArrayList<>();
+            int sectionId_temp=-1;
+            selectSectionPtmt.setInt(1,sectionId);
+            ResultSet set=selectSectionPtmt.executeQuery();
+            while (set.next()){
+                sectionId_temp=set.getInt("sectionId");
+            }
+            if (sectionId_temp==-1){
+                throw new EntityNotFoundException();
+            }
+            getCourseSectionClassesPtmt.setInt(1,sectionId);
+            set=getCourseSectionClassesPtmt.executeQuery();
+            ResultSet aset=null;
+            while (set.next()){
+                CourseSectionClass tclass=new CourseSectionClass();
+                Instructor ins=new Instructor();
+                tclass.id=set.getInt("classId");
+                tclass.dayOfWeek=DayOfWeek.of(set.getInt("dayOfWeek"));
+                tclass.weekList= IntTox.intToList(set.getInt("weekList"));
+                tclass.classBegin=IntTox.getBegin(set.getInt("classTime"));
+                tclass.classEnd=IntTox.getEnd(set.getInt("classTime"));
+                tclass.location=set.getString("location");
+                getInstructorPtmt.setInt(1,tclass.id);
+                aset=getInstructorPtmt.executeQuery();
+                while (aset.next()){
+                    ins.id=aset.getInt("instructorId");
+                    ins.fullName=aset.getString("firstName")+" "+aset.getString("lastName");
+                }
+                tclass.instructor=ins;
+                list.add(tclass);
+            }
+            return list;
+        }
+        catch (SQLException e) {
+            e.printStackTrace();
+            return new ArrayList<CourseSectionClass>();
+        }
     }
 
     @Override
     public CourseSection getCourseSectionByClass(int classId) {
-        return null;
+        try(
+                Connection conn=SQLDataSource.getInstance().getSQLConnection();
+                PreparedStatement selectClassPtmt=conn.prepareStatement("select * from class where classId=?");
+                PreparedStatement selectSectionPtmt=conn.prepareStatement("select * from section where sectionId=?");
+                )
+        {
+            int sectionId=-1;
+            selectClassPtmt.setInt(1,classId);
+            ResultSet set=selectClassPtmt.executeQuery();
+            while (set.next()){
+                sectionId=set.getInt("sectionId");
+            }
+            if (sectionId==-1){
+                throw new EntityNotFoundException();
+            }
+            selectSectionPtmt.setInt(1,sectionId);
+            set=selectSectionPtmt.executeQuery();
+            CourseSection section=new CourseSection();
+            while (set.next()){
+                section.id=sectionId;
+                section.name=set.getString("sectionName");
+                section.totalCapacity=set.getInt("totalCapacity");
+                section.leftCapacity=set.getInt("leftCapacity");
+            }
+            return section;
+        }
+        catch (SQLException e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 
     @Override
