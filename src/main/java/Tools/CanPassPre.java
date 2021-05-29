@@ -6,7 +6,7 @@ import java.util.regex.Pattern;
 
 public class CanPassPre {
     public static void main(String[] args) {
-        String[] s=getPreName("(((I+J)*F)*((K*L)+H)*D)");
+        String[] s=getPreName("(((MA101+MA1)*MA9)*((MA10*MA4)+MA6)*MA7)");
         for (String ss:s){
             System.out.print(ss+" ");
         }
@@ -73,6 +73,7 @@ public class CanPassPre {
         }
         return arr;
     }
+
 
     //
     public static boolean canLearnThisCourse(String pre,ArrayList<String> courseLearned){

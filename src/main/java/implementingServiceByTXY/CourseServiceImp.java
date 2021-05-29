@@ -1,4 +1,5 @@
 package implementingServiceByTXY;
+import Tools.CanPassPre;
 import Tools.IntTox;
 import Tools.MultiChooseIntGenerator;
 import cn.edu.sustech.cs307.dto.*;
@@ -24,9 +25,27 @@ public class CourseServiceImp implements CourseService{
                 Connection conn=SQLDataSource.getInstance().getSQLConnection();
                 PreparedStatement addCoursePtmt =conn.prepareStatement("insert into " +
                         "course(courseId,courseName,credit,classHour,courseGrading,pre) " +
-                        "values(?,?,?,?,?,?)")
+                        "values(?,?,?,?,?,?)");
+                PreparedStatement existPtmt=conn.prepareStatement("select exists(select * from course where courseId=?)")
             )
         {
+            String pre="";
+            if (coursePrerequisite!=null){
+                pre=getPreString(coursePrerequisite);
+                String[] ss= CanPassPre.getPreName(pre);
+                boolean isexist=false;
+                ResultSet set=null;
+                for (String cid:ss){
+                    existPtmt.setString(1,cid);
+                    set=existPtmt.executeQuery();
+                    while (set.next()){
+                        isexist=set.getBoolean(1);
+                    }
+                    if (!isexist){
+                        throw new IntegrityViolationException();
+                    }
+                }
+            }
             addCoursePtmt .setString(1,courseId);
             addCoursePtmt .setString(2,courseName);
             addCoursePtmt .setInt(3,credit);
@@ -36,7 +55,7 @@ public class CourseServiceImp implements CourseService{
             else
                 addCoursePtmt .setInt(5,2);
             if (coursePrerequisite!=null)
-                addCoursePtmt .setString(6,getPreString(coursePrerequisite));
+                addCoursePtmt .setString(6,pre);
             else
                 addCoursePtmt.setString(6,null);
             addCoursePtmt .executeUpdate();
@@ -46,6 +65,7 @@ public class CourseServiceImp implements CourseService{
             throw new IntegrityViolationException();
         }
     }
+
 
     public static void main(String[] args) {
 /*        Prerequisite KDK = new AndPrerequisite(List.of(
@@ -85,13 +105,14 @@ public class CourseServiceImp implements CourseService{
             e.printStackTrace();
         }*/
 
-        CourseServiceImp eimp=new CourseServiceImp();
+       /* CourseServiceImp eimp=new CourseServiceImp();
         short a=1;
         short b=2;
         short c=3;
         short d=4;
         short e=5;
-        System.out.println(eimp.addCourseSectionClass(2,111,DayOfWeek.SUNDAY,List.of(a,b,c,d,e),a,e,"A"));
+        System.out.println(eimp.addCourseSectionClass(2,111,DayOfWeek.SUNDAY,List.of(a,b,c,d,e),a,e,"A"));*/
+
        /* CourseServiceImp kimp=new CourseServiceImp();
         kimp.removeCourse("MA101");*/
 
@@ -109,6 +130,14 @@ public class CourseServiceImp implements CourseService{
 
 //        CourseServiceImp jimp=new CourseServiceImp();
 //        jimp.removeCourseSectionClass(3);
+
+        CourseServiceImp imp=new CourseServiceImp();
+        Prerequisite calculus = new OrPrerequisite(List.of(
+                new CoursePrerequisite("MA101A"),
+                new CoursePrerequisite("MA101B")
+        ));
+        imp.addCourse("MA707","CESHI",1,
+                1, Course.CourseGrading.HUNDRED_MARK_SCORE,calculus);
 
     }
 
@@ -546,4 +575,7 @@ public class CourseServiceImp implements CourseService{
     public List<Student> getEnrolledStudentsInSemester(String courseId, int semesterId) {
         return null;
     }
+
+
+
 }

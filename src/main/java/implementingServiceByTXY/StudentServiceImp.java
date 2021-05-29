@@ -1,5 +1,6 @@
 package implementingServiceByTXY;
 
+import cn.edu.sustech.cs307.database.SQLDataSource;
 import cn.edu.sustech.cs307.dto.Course;
 import cn.edu.sustech.cs307.dto.CourseSearchEntry;
 import cn.edu.sustech.cs307.dto.CourseTable;
@@ -8,7 +9,10 @@ import cn.edu.sustech.cs307.dto.grade.Grade;
 import cn.edu.sustech.cs307.service.StudentService;
 
 import javax.annotation.Nullable;
+import java.sql.Connection;
 import java.sql.Date;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.time.DayOfWeek;
 import java.util.List;
 import java.util.Map;
@@ -16,6 +20,28 @@ import java.util.Map;
 public class StudentServiceImp implements StudentService {
     @Override
     public synchronized void addStudent(int userId, int majorId, String firstName, String lastName, Date enrolledDate) {
+        try(
+                Connection conn= SQLDataSource.getInstance().getSQLConnection();
+                PreparedStatement ptmt=conn.prepareStatement("insert into student(studentId,majorId,firstName,lastName,enrolleddate) " +
+                        "values(?,?,?,?,?)");
+                PreparedStatement uptmt=conn.prepareStatement("insert into tuser(userId,firstName,lastName,tos) values(?,?,?,?)");
+        )
+        {
+            uptmt.setInt(1,userId);
+            uptmt.setString(2,firstName);
+            uptmt.setString(3,lastName);
+            uptmt.setInt(4,2);
+            uptmt.executeUpdate();
+            ptmt.setInt(1,userId);
+            ptmt.setInt(2,majorId);
+            ptmt.setString(3,firstName);
+            ptmt.setString(4,lastName);
+            ptmt.setDate(5,enrolledDate);
+            ptmt.executeUpdate();
+        }
+        catch (SQLException e){
+            e.printStackTrace();
+        }
 
     }
 
@@ -62,5 +88,10 @@ public class StudentServiceImp implements StudentService {
     @Override
     public Major getStudentMajor(int studentId) {
         return null;
+    }
+
+    public static void main(String[] args) {
+        StudentServiceImp simp=new StudentServiceImp();
+
     }
 }

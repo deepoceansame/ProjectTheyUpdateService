@@ -126,8 +126,8 @@ public class DepartmentServiceImp implements DepartmentService {
 
     public static void main(String[] args) {
         DepartmentServiceImp imp=new DepartmentServiceImp();
-//        System.out.println(imp.addDepartment("魔法部"));
-//        System.out.println(imp.addDepartment("魔具部"));
+        System.out.println(imp.addDepartment("魔法部"));
+        System.out.println(imp.addDepartment("魔具部"));
         List<Department> list=imp.getAllDepartments();
         for (Department dd:list){
             System.out.println(dd.name);
