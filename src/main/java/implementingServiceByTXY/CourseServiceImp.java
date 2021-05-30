@@ -19,14 +19,18 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class CourseServiceImp implements CourseService{
+    static String insPre="insert into prerequisite (isRoot,preType,courseId) values(?,?,?)";
+    static String insMas="insert into mas (master,servant) values(?,?) ";
+    static String getPreId="select nextval('prerequisite_preid_seq')";
+    static String setPreId="select setval('prerequisite_preid_seq',?)";
     @Override
     public void addCourse(String courseId, String courseName, int credit, int classHour, Course.CourseGrading grading, @Nullable Prerequisite coursePrerequisite) {
         try(
                 Connection conn=SQLDataSource.getInstance().getSQLConnection();
                 PreparedStatement addCoursePtmt =conn.prepareStatement("insert into " +
-                        "course(courseId,courseName,credit,classHour,courseGrading,pre) " +
-                        "values(?,?,?,?,?,?)");
-                PreparedStatement existPtmt=conn.prepareStatement("select exists(select * from course where courseId=?)")
+                        "course(courseId,courseName,credit,classHour,courseGrading,pre,preId) " +
+                        "values(?,?,?,?,?,?,?)");
+                PreparedStatement existPtmt=conn.prepareStatement("select exists(select * from course where courseId=?)");
             )
         {
             String pre="";
@@ -46,6 +50,10 @@ public class CourseServiceImp implements CourseService{
                     }
                 }
             }
+            int pid=0;
+            if(coursePrerequisite!=null){
+                pid=addPreToTable(coursePrerequisite,true,-1);
+            }
             addCoursePtmt .setString(1,courseId);
             addCoursePtmt .setString(2,courseName);
             addCoursePtmt .setInt(3,credit);
@@ -54,10 +62,14 @@ public class CourseServiceImp implements CourseService{
                 addCoursePtmt .setInt(5,1);
             else
                 addCoursePtmt .setInt(5,2);
-            if (coursePrerequisite!=null)
+            if (coursePrerequisite!=null){
                 addCoursePtmt .setString(6,pre);
-            else
+                addCoursePtmt.setInt(7,pid);
+            }
+            else{
                 addCoursePtmt.setString(6,null);
+                addCoursePtmt.setInt(7,-888);
+            }
             addCoursePtmt .executeUpdate();
         }
         catch (SQLException e){
@@ -66,14 +78,122 @@ public class CourseServiceImp implements CourseService{
         }
     }
 
+    public static int addPreToTable(Prerequisite prep,boolean isRoot,int fatherId) throws SQLException {
+        int thisId=0;
+        if (prep instanceof CoursePrerequisite){
+            thisId=addPre(isRoot,3,((CoursePrerequisite) prep).courseID);
+            if (!isRoot){
+                addMas(fatherId,thisId);
+            }
+            else{
+                isRoot=false;
+            }
+        }
+        else if (prep instanceof AndPrerequisite){
+            thisId=addPre(isRoot,1,null);
+            if (!isRoot){
+                addMas(fatherId,thisId);
+            }
+            else{
+                isRoot=false;
+            }
+           for (Prerequisite item: ((AndPrerequisite) prep).terms ){
+               addPreToTable(item,isRoot,thisId);
+           }
+        }
+        else{
+            thisId=addPre(isRoot,2,null);
+            if (!isRoot){
+                addMas(fatherId,thisId);
+            }
+            else{
+                isRoot=false;
+            }
+            for (Prerequisite item: ((OrPrerequisite) prep).terms ){
+                addPreToTable(item,isRoot,thisId);
+            }
+        }
+        return thisId;
+    }
 
-    public static void main(String[] args) {
-/*        Prerequisite KDK = new AndPrerequisite(List.of(
+    public static int addPre(boolean isRoot,int type,@Nullable String courseId) throws SQLException {
+        try(
+                Connection conn=SQLDataSource.getInstance().getSQLConnection();
+                PreparedStatement insPtmt=conn.prepareStatement(insPre);
+                PreparedStatement getIdPtmt=conn.prepareStatement(getPreId);
+                PreparedStatement setIdPtmt=conn.prepareStatement(setPreId);
+                )
+        {
+            insPtmt.setBoolean(1,isRoot);
+            insPtmt.setInt(2,type);
+            if (courseId==null)
+                insPtmt.setString(3,null);
+            else
+                insPtmt.setString(3,courseId);
+            insPtmt.executeUpdate();
+            int id=0;
+            ResultSet set=getIdPtmt.executeQuery();
+            while (set.next()){
+                id=set.getInt(1);
+            }
+            setIdPtmt.setInt(1,id-1);
+            setIdPtmt.executeQuery();
+            return id-1;
+        }
+
+    }
+
+    public static void addMas(int master,int servant) throws SQLException{
+        try(
+                Connection conn=SQLDataSource.getInstance().getSQLConnection();
+                PreparedStatement insPtmt=conn.prepareStatement(insMas);
+        )
+        {
+            insPtmt.setInt(1,master);
+            insPtmt.setInt(2,servant);
+            insPtmt.executeUpdate();
+        }
+    }
+
+    public static void main(String[] args) throws SQLException {
+          Prerequisite KDK = new AndPrerequisite(List.of(
                 new AndPrerequisite(List.of(new OrPrerequisite(List.of(new CoursePrerequisite("I"),new CoursePrerequisite("J"))),new CoursePrerequisite("F"))),
                 new OrPrerequisite(List.of(new AndPrerequisite(List.of(new CoursePrerequisite("K"),new CoursePrerequisite("L"))),new CoursePrerequisite("H"))),
                 new CoursePrerequisite("D")
         ));
-        Prerequisite calculus = new OrPrerequisite(List.of(
+
+        short a=1;
+        short b=2;
+        short c=3;
+        short d=4;
+        short e=5;
+          Prerequisite LUL=new OrPrerequisite(List.of(new OrPrerequisite(List.of(new CoursePrerequisite("I"),new CoursePrerequisite("F"))),
+                  new AndPrerequisite(List.of(new CoursePrerequisite("K")))));
+        CourseServiceImp imp=new CourseServiceImp();
+        //imp.addCourseSectionClass(2,101,DayOfWeek.SUNDAY,List.of(a,b),a,b,"A");
+        imp.addCourseSectionClass(3,102,DayOfWeek.SUNDAY,List.of(b,d),a,b,"B");
+//        imp.addCourse("LUL","LUL",1,1, Course.CourseGrading.PASS_OR_FAIL,
+//        LUL);
+
+       /* imp.addCourse("I","I",1,1, Course.CourseGrading.HUNDRED_MARK_SCORE
+            ,null);
+        imp.addCourse("J","J",1,1, Course.CourseGrading.HUNDRED_MARK_SCORE
+                ,null);
+        imp.addCourse("K","K",1,1, Course.CourseGrading.HUNDRED_MARK_SCORE
+                ,null);
+        imp.addCourse("L","L",1,1, Course.CourseGrading.HUNDRED_MARK_SCORE
+                ,null);
+        imp.addCourse("H","H",1,1, Course.CourseGrading.HUNDRED_MARK_SCORE
+                ,null);
+        imp.addCourse("D","D",1,1, Course.CourseGrading.HUNDRED_MARK_SCORE
+                ,null);*/
+
+        /*imp.addCourse("F","F",1,1, Course.CourseGrading.HUNDRED_MARK_SCORE
+                ,null);
+        imp.addCourse("JIM","JIM",1,1, Course.CourseGrading.PASS_OR_FAIL
+        ,KDK);*/
+
+        /*Prerequisite calculus = new OrPrerequisite(List.of(
                 new CoursePrerequisite("MA101A"),
                 new CoursePrerequisite("MA101B")
         ));
@@ -131,14 +251,14 @@ public class CourseServiceImp implements CourseService{
 //        CourseServiceImp jimp=new CourseServiceImp();
 //        jimp.removeCourseSectionClass(3);
 
-        CourseServiceImp imp=new CourseServiceImp();
+ /*       CourseServiceImp imp=new CourseServiceImp();
         Prerequisite calculus = new OrPrerequisite(List.of(
                 new CoursePrerequisite("MA101A"),
                 new CoursePrerequisite("MA101B")
         ));
         imp.addCourse("MA707","CESHI",1,
                 1, Course.CourseGrading.HUNDRED_MARK_SCORE,calculus);
-
+*/
     }
 
     public static String getPreString(Prerequisite pre){
