@@ -11,10 +11,9 @@ import cn.edu.sustech.cs307.service.StudentService;
 
 import javax.annotation.Nullable;
 import java.sql.*;
+import java.sql.Date;
 import java.time.DayOfWeek;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class StudentServiceImp implements StudentService {
     @Override
@@ -279,16 +278,144 @@ public class StudentServiceImp implements StudentService {
         }
         catch (SQLException e) {
             e.printStackTrace();
+            throw new IntegrityViolationException();
         }
     }
 
     @Override
     public void setEnrolledCourseGrade(int studentId, int sectionId, Grade grade) {
+        try(
+                Connection conn=SQLDataSource.getInstance().getSQLConnection();
+                PreparedStatement enrollExiPtmt=conn.prepareStatement("select exists(select * from enroll where studentId=? and sectionId=?)");
+                PreparedStatement getCourseIdBysectionIdPtmt=conn.prepareStatement("select courseId from section where sectionId=?");
+                PreparedStatement getGradMethodPtmt=conn.prepareStatement("select courseGrading from course where courseId=?");
+                PreparedStatement setGradePtmt=conn.prepareStatement("update enroll set grade=? where studentId=? and sectionId=?");
+                )
+        {
+            if (grade instanceof HundredMarkGrade){
+                if ( ((HundredMarkGrade)grade).mark<0 ||  ((HundredMarkGrade)grade).mark>100 ){
+                    throw new IntegrityViolationException();
+                }
+            }
+            boolean enrollExi=false;
+            enrollExiPtmt.setInt(1,studentId);
+            enrollExiPtmt.setInt(2,sectionId);
+            ResultSet set=enrollExiPtmt.executeQuery();
+            while (set.next()){
+                enrollExi=set.getBoolean(1);
+            }
+            if (!enrollExi){
+                throw new EntityNotFoundException();
+            }
 
+            String courseId="";
+            getCourseIdBysectionIdPtmt.setInt(1,sectionId);
+            set=getCourseIdBysectionIdPtmt.executeQuery();
+            while (set.next()){
+                courseId=set.getString(1);
+            }
+
+            int gradMe=0;
+            getGradMethodPtmt.setString(1,courseId);
+            set=getGradMethodPtmt.executeQuery();
+            while (set.next()){
+                gradMe=set.getInt(1);
+            }
+
+            setGradePtmt.setInt(2,studentId);
+            setGradePtmt.setInt(3,sectionId);
+            if (gradMe==1){
+                if (grade instanceof HundredMarkGrade){
+                    throw new IntegrityViolationException();
+                }
+                if (((PassOrFailGrade)grade).toString().equals("PASS")){
+                    setGradePtmt.setInt(1,-1);
+                }
+                else {
+                    setGradePtmt.setInt(1,-2);
+                }
+            }
+            else{
+                if (grade instanceof PassOrFailGrade){
+                    throw new IntegrityViolationException();
+                }
+                setGradePtmt.setInt(1,((HundredMarkGrade)grade).mark );
+            }
+            setGradePtmt.executeUpdate();
+        }
+        catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
     public Map<Course, Grade> getEnrolledCoursesAndGrades(int studentId, @Nullable Integer semesterId) {
+        try(
+                Connection conn=SQLDataSource.getInstance().getSQLConnection();
+                PreparedStatement getCoursesAndGradesPtmt=conn.prepareStatement("select * from enroll natural join section where (semesterId=? or ?) and studentId=? order by semesterId");
+                PreparedStatement getCourseByIdPtmt=conn.prepareStatement("select * from course where courseId=?");
+                )
+        {
+            getCoursesAndGradesPtmt.setInt(3,studentId);
+            if (semesterId==null){
+                getCoursesAndGradesPtmt.setInt(1,-1);
+                getCoursesAndGradesPtmt.setBoolean(2,true);
+            }
+            else{
+                getCoursesAndGradesPtmt.setInt(1,semesterId);
+                getCoursesAndGradesPtmt.setBoolean(2,false);
+            }
+            ResultSet set=getCoursesAndGradesPtmt.executeQuery();
+            TreeMap<String,Integer> tempMap=new TreeMap<>();
+            HashMap<Course,Grade> retMap=new HashMap<>();
+//            Course: id name credit classHour grading
+            String courseId="";
+            int gra=0;
+            int grading=0;
+            while (set.next()){
+                //System.out.println(set.getString("courseId")+" "+set.getInt("sectionId")+" "+set.getInt("semesterId")+" "+set.getInt("grade") );
+                courseId=set.getString("courseId");
+                gra=set.getInt("grade");
+                tempMap.put(courseId,gra);
+            }
+            for (String s:tempMap.keySet()){
+                gra=tempMap.get(s);
+                Course course=new Course();
+                Grade g=null;
+                getCourseByIdPtmt.setString(1,s);
+                set=getCourseByIdPtmt.executeQuery();
+                while (set.next()){
+                    course.id=s;
+                    course.name=set.getString("courseName");
+                    course.credit=set.getInt("credit");
+                    course.classHour=set.getInt("classHour");
+                    grading=set.getInt("courseGrading");
+                    if (grading==1){
+                        course.grading= Course.CourseGrading.PASS_OR_FAIL;
+                    }
+                    else{
+                        course.grading= Course.CourseGrading.HUNDRED_MARK_SCORE;
+                    }
+                }
+                if (gra==-3){
+                    g=null;
+                }
+                else if (gra==-2){
+                    g=PassOrFailGrade.FAIL;
+                }
+                else if (gra==-1){
+                    g=PassOrFailGrade.PASS;
+                }
+                else{
+                    g=new HundredMarkGrade((short)gra);
+                }
+                retMap.put(course,g);
+            }
+            return retMap;
+        }
+        catch (SQLException e) {
+            e.printStackTrace();
+        }
         return null;
     }
 
@@ -403,8 +530,25 @@ public class StudentServiceImp implements StudentService {
 
 //        System.out.println(simp.enrollCourse(666,2));
 
-        short s=30;
-        simp.addEnrolledCourseWithGrade(666,11,PassOrFailGrade.PASS);
+        short s=40;
+        short g=61;
+//        simp.addEnrolledCourseWithGrade(666,11,PassOrFailGrade.PASS);
+//       simp.addEnrolledCourseWithGrade(666,8,new HundredMarkGrade(g));
+//       simp.addEnrolledCourseWithGrade(666,9,new HundredMarkGrade(g));
+//       simp.addEnrolledCourseWithGrade(666,10,new HundredMarkGrade(g));
+
+        /*Map<Course,Grade> map=simp.getEnrolledCoursesAndGrades(666,null);
+        Grade gg=null;
+        for (Course c:map.keySet()){
+            gg=map.get(c);
+            if (gg instanceof PassOrFailGrade){
+                System.out.println(c.id+" "+c.grading.toString()+" "+gg.toString());
+            }
+            else {
+                System.out.println(c.id+" "+c.grading.toString()+" "+((HundredMarkGrade)gg).mark);
+            }
+        }*/
+
 
     }
 }
