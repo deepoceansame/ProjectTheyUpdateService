@@ -155,119 +155,6 @@ public class CourseServiceImp implements CourseService{
         }
     }
 
-    public static void main(String[] args) throws SQLException {
-          Prerequisite KDK = new AndPrerequisite(List.of(
-                new AndPrerequisite(List.of(new OrPrerequisite(List.of(new CoursePrerequisite("I"),new CoursePrerequisite("J"))),new CoursePrerequisite("F"))),
-                new OrPrerequisite(List.of(new AndPrerequisite(List.of(new CoursePrerequisite("K"),new CoursePrerequisite("L"))),new CoursePrerequisite("H"))),
-                new CoursePrerequisite("D")
-        ));
-
-        short a=1;
-        short b=2;
-        short c=3;
-        short d=4;
-        short e=5;
-        short f=6;
-        short g=7;
-        short h=8;
-          Prerequisite LUL=new OrPrerequisite(List.of(new OrPrerequisite(List.of(new CoursePrerequisite("I"),new CoursePrerequisite("F"))),
-                  new AndPrerequisite(List.of(new CoursePrerequisite("K")))));
-        CourseServiceImp imp=new CourseServiceImp();
-        //imp.addCourseSectionClass(2,101,DayOfWeek.SUNDAY,List.of(a,b),a,b,"A");
-//        imp.addCourseSectionClass(3,102,DayOfWeek.SUNDAY,List.of(b,d),a,b,"B");
-//        imp.addCourse("LUL","LUL",1,1, Course.CourseGrading.PASS_OR_FAIL,
-//        LUL);
-
-
-//        imp.addCourseSectionClass(4,101,DayOfWeek.SATURDAY,List.of(g,h),g,h,"A");
-        imp.addCourseSectionClass(4,102,DayOfWeek.SUNDAY,List.of(f,g),f,g,"B");
-
-       /* imp.addCourse("I","I",1,1, Course.CourseGrading.HUNDRED_MARK_SCORE
-            ,null);
-        imp.addCourse("J","J",1,1, Course.CourseGrading.HUNDRED_MARK_SCORE
-                ,null);
-        imp.addCourse("K","K",1,1, Course.CourseGrading.HUNDRED_MARK_SCORE
-                ,null);
-        imp.addCourse("L","L",1,1, Course.CourseGrading.HUNDRED_MARK_SCORE
-                ,null);
-        imp.addCourse("H","H",1,1, Course.CourseGrading.HUNDRED_MARK_SCORE
-                ,null);
-        imp.addCourse("D","D",1,1, Course.CourseGrading.HUNDRED_MARK_SCORE
-                ,null);*/
-
-        /*imp.addCourse("F","F",1,1, Course.CourseGrading.HUNDRED_MARK_SCORE
-                ,null);
-        imp.addCourse("JIM","JIM",1,1, Course.CourseGrading.PASS_OR_FAIL
-        ,KDK);*/
-
-        /*Prerequisite calculus = new OrPrerequisite(List.of(
-                new CoursePrerequisite("MA101A"),
-                new CoursePrerequisite("MA101B")
-        ));
-        Prerequisite algebra = new CoursePrerequisite("MA103A");
-        Prerequisite prerequisite = new AndPrerequisite(List.of(calculus, algebra));
-        String s=getPreString(KDK);
-        System.out.println(s);
-        System.out.println(s.replaceAll("\\*"," AND ").replaceAll("\\+"," OR "));*/
-
-      /*  Prerequisite calculus = new OrPrerequisite(List.of(
-                new CoursePrerequisite("MA101A"),
-                new CoursePrerequisite("MA101B")
-        ));*/
-
-
- /*       CourseServiceImp dimp=new CourseServiceImp();
-        dimp.addCourseSection("MA101",3,"中文二班",100);
-        dimp.addCourseSection("MA101",4,"中文二班",100);*/
-
-
-        /*try(
-                Connection conn=SQLDataSource.getInstance().getSQLConnection();
-                PreparedStatement ptmt=conn.prepareStatement("insert into testserial(val) values (111)");
-                )
-        {
-            ptmt.executeUpdate();
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }*/
-
-       /* CourseServiceImp eimp=new CourseServiceImp();
-        short a=1;
-        short b=2;
-        short c=3;
-        short d=4;
-        short e=5;
-        System.out.println(eimp.addCourseSectionClass(2,111,DayOfWeek.SUNDAY,List.of(a,b,c,d,e),a,e,"A"));*/
-
-       /* CourseServiceImp kimp=new CourseServiceImp();
-        kimp.removeCourse("MA101");*/
-
-     /*   CourseServiceImp wimp=new CourseServiceImp();
-        List<CourseSectionClass> list=wimp.getCourseSectionClasses(3);
-        for (CourseSectionClass c:list){
-            System.out.println(c.id+" "+c.instructor.id);*/
-
-       /* CourseServiceImp limp=new CourseServiceImp();
-        CourseSection section= limp.getCourseSectionByClass(5);
-        System.out.println(section.id+" "+section.name);*/
-
-       /* CourseServiceImp oimp=new CourseServiceImp();
-        oimp.addCourse("MD101","魔法导论",10,50,Course.CourseGrading.HUNDRED_MARK_SCORE,null);*/
-
-//        CourseServiceImp jimp=new CourseServiceImp();
-//        jimp.removeCourseSectionClass(3);
-
- /*       CourseServiceImp imp=new CourseServiceImp();
-        Prerequisite calculus = new OrPrerequisite(List.of(
-                new CoursePrerequisite("MA101A"),
-                new CoursePrerequisite("MA101B")
-        ));
-        imp.addCourse("MA707","CESHI",1,
-                1, Course.CourseGrading.HUNDRED_MARK_SCORE,calculus);
-*/
-    }
-
     public static String getPreString(Prerequisite pre){
         StringBuilder s=new StringBuilder("");
         if (pre instanceof CoursePrerequisite){
@@ -719,4 +606,118 @@ public class CourseServiceImp implements CourseService{
 
 
 
+
+    public static void main(String[] args) throws SQLException {
+        Prerequisite KDK = new AndPrerequisite(List.of(
+                new AndPrerequisite(List.of(new OrPrerequisite(List.of(new CoursePrerequisite("I"),new CoursePrerequisite("J"))),new CoursePrerequisite("F"))),
+                new OrPrerequisite(List.of(new AndPrerequisite(List.of(new CoursePrerequisite("K"),new CoursePrerequisite("L"))),new CoursePrerequisite("H"))),
+                new CoursePrerequisite("D")
+        ));
+
+        short a=1;
+        short b=2;
+        short c=3;
+        short d=4;
+        short e=5;
+        short f=6;
+        short g=7;
+        short h=8;
+        Prerequisite LUL=new OrPrerequisite(List.of(new OrPrerequisite(List.of(new CoursePrerequisite("I"),new CoursePrerequisite("F"))),
+                new AndPrerequisite(List.of(new CoursePrerequisite("K")))));
+        CourseServiceImp imp=new CourseServiceImp();
+
+        //imp.addCourseSectionClass(2,101,DayOfWeek.SUNDAY,List.of(a,b),a,b,"A");
+//        imp.addCourseSectionClass(3,102,DayOfWeek.SUNDAY,List.of(b,d),a,b,"B");
+//        imp.addCourse("LUL","LUL",1,1, Course.CourseGrading.PASS_OR_FAIL,
+//        LUL);
+
+
+//        imp.addCourseSectionClass(4,101,DayOfWeek.SATURDAY,List.of(g,h),g,h,"A");
+//        imp.addCourseSectionClass(4,102,DayOfWeek.SUNDAY,List.of(f,g),f,g,"B");
+
+       /* imp.addCourse("I","I",1,1, Course.CourseGrading.HUNDRED_MARK_SCORE
+            ,null);
+        imp.addCourse("J","J",1,1, Course.CourseGrading.HUNDRED_MARK_SCORE
+                ,null);
+        imp.addCourse("K","K",1,1, Course.CourseGrading.HUNDRED_MARK_SCORE
+                ,null);
+        imp.addCourse("L","L",1,1, Course.CourseGrading.HUNDRED_MARK_SCORE
+                ,null);
+        imp.addCourse("H","H",1,1, Course.CourseGrading.HUNDRED_MARK_SCORE
+                ,null);
+        imp.addCourse("D","D",1,1, Course.CourseGrading.HUNDRED_MARK_SCORE
+                ,null);*/
+
+        /*imp.addCourse("F","F",1,1, Course.CourseGrading.HUNDRED_MARK_SCORE
+                ,null);
+        imp.addCourse("JIM","JIM",1,1, Course.CourseGrading.PASS_OR_FAIL
+        ,KDK);*/
+
+        /*Prerequisite calculus = new OrPrerequisite(List.of(
+                new CoursePrerequisite("MA101A"),
+                new CoursePrerequisite("MA101B")
+        ));
+        Prerequisite algebra = new CoursePrerequisite("MA103A");
+        Prerequisite prerequisite = new AndPrerequisite(List.of(calculus, algebra));
+        String s=getPreString(KDK);
+        System.out.println(s);
+        System.out.println(s.replaceAll("\\*"," AND ").replaceAll("\\+"," OR "));*/
+
+      /*  Prerequisite calculus = new OrPrerequisite(List.of(
+                new CoursePrerequisite("MA101A"),
+                new CoursePrerequisite("MA101B")
+        ));*/
+
+
+ /*       CourseServiceImp dimp=new CourseServiceImp();
+        dimp.addCourseSection("MA101",3,"中文二班",100);
+        dimp.addCourseSection("MA101",4,"中文二班",100);*/
+
+
+        /*try(
+                Connection conn=SQLDataSource.getInstance().getSQLConnection();
+                PreparedStatement ptmt=conn.prepareStatement("insert into testserial(val) values (111)");
+                )
+        {
+            ptmt.executeUpdate();
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }*/
+
+       /* CourseServiceImp eimp=new CourseServiceImp();
+        short a=1;
+        short b=2;
+        short c=3;
+        short d=4;
+        short e=5;
+        System.out.println(eimp.addCourseSectionClass(2,111,DayOfWeek.SUNDAY,List.of(a,b,c,d,e),a,e,"A"));*/
+
+       /* CourseServiceImp kimp=new CourseServiceImp();
+        kimp.removeCourse("MA101");*/
+
+     /*   CourseServiceImp wimp=new CourseServiceImp();
+        List<CourseSectionClass> list=wimp.getCourseSectionClasses(3);
+        for (CourseSectionClass c:list){
+            System.out.println(c.id+" "+c.instructor.id);*/
+
+       /* CourseServiceImp limp=new CourseServiceImp();
+        CourseSection section= limp.getCourseSectionByClass(5);
+        System.out.println(section.id+" "+section.name);*/
+
+       /* CourseServiceImp oimp=new CourseServiceImp();
+        oimp.addCourse("MD101","魔法导论",10,50,Course.CourseGrading.HUNDRED_MARK_SCORE,null);*/
+
+//        CourseServiceImp jimp=new CourseServiceImp();
+//        jimp.removeCourseSectionClass(3);
+
+ /*       CourseServiceImp imp=new CourseServiceImp();
+        Prerequisite calculus = new OrPrerequisite(List.of(
+                new CoursePrerequisite("MA101A"),
+                new CoursePrerequisite("MA101B")
+        ));
+        imp.addCourse("MA707","CESHI",1,
+                1, Course.CourseGrading.HUNDRED_MARK_SCORE,calculus);
+*/
+    }
 }
