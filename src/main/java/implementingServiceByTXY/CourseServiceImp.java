@@ -167,13 +167,20 @@ public class CourseServiceImp implements CourseService{
         short c=3;
         short d=4;
         short e=5;
+        short f=6;
+        short g=7;
+        short h=8;
           Prerequisite LUL=new OrPrerequisite(List.of(new OrPrerequisite(List.of(new CoursePrerequisite("I"),new CoursePrerequisite("F"))),
                   new AndPrerequisite(List.of(new CoursePrerequisite("K")))));
         CourseServiceImp imp=new CourseServiceImp();
         //imp.addCourseSectionClass(2,101,DayOfWeek.SUNDAY,List.of(a,b),a,b,"A");
-        imp.addCourseSectionClass(3,102,DayOfWeek.SUNDAY,List.of(b,d),a,b,"B");
+//        imp.addCourseSectionClass(3,102,DayOfWeek.SUNDAY,List.of(b,d),a,b,"B");
 //        imp.addCourse("LUL","LUL",1,1, Course.CourseGrading.PASS_OR_FAIL,
 //        LUL);
+
+
+//        imp.addCourseSectionClass(4,101,DayOfWeek.SATURDAY,List.of(g,h),g,h,"A");
+        imp.addCourseSectionClass(4,102,DayOfWeek.SUNDAY,List.of(f,g),f,g,"B");
 
        /* imp.addCourse("I","I",1,1, Course.CourseGrading.HUNDRED_MARK_SCORE
             ,null);
@@ -331,7 +338,8 @@ public class CourseServiceImp implements CourseService{
                 PreparedStatement teachInsertPtmt=conn.prepareStatement("insert into teach " +
                         "(instructorId,classId) values(?,?)");
                 PreparedStatement executeNoCoincidencePtmt=conn.prepareStatement("select noCoincidenceAboutTeach(?,?,?,?,?,?)");
-                PreparedStatement executeNoCoinAboutClassPtmt=conn.prepareStatement("select noCoinAboutClass(?,?,?,?,?)")
+                PreparedStatement executeNoCoinAboutClassPtmt=conn.prepareStatement("select noCoinAboutClass(?,?,?,?,?)");
+                PreparedStatement executeNoConfClassWithSameSection=conn.prepareStatement("select NoConfClassWithSameSection(?,?,?,?)")
 
         )
         {
@@ -369,6 +377,19 @@ public class CourseServiceImp implements CourseService{
             executeNoCoinAboutClassPtmt.setString(5,location);
             checkCoin=executeNoCoinAboutClassPtmt.executeQuery();
             canpass=false;
+            while (checkCoin.next()){
+                canpass=checkCoin.getBoolean(1);
+            }
+            if (!canpass){
+                throw new IntegrityViolationException();
+            }
+
+            executeNoConfClassWithSameSection.setInt(1,sectionId);
+            executeNoConfClassWithSameSection.setInt(2,weekListInt);
+            executeNoConfClassWithSameSection.setInt(3,dayOfWeek.getValue());
+            executeNoConfClassWithSameSection.setInt(4,classTimeInt);
+            canpass=false;
+            checkCoin=executeNoConfClassWithSameSection.executeQuery();
             while (checkCoin.next()){
                 canpass=checkCoin.getBoolean(1);
             }
