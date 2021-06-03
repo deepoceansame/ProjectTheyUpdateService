@@ -142,11 +142,13 @@ public class UserServiceImp implements UserService {
     }
 
     public static void main(String[] args) {
-        UserServiceImp oimp=new UserServiceImp();
+        /*UserServiceImp oimp=new UserServiceImp();
         List<User> list=oimp.getAllUsers();
         for (User a:list){
             System.out.println(a.fullName);
-        }
+        }*/
+
+        System.out.println(getFullName("tea","cher"));
     }
 
 

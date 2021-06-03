@@ -217,6 +217,7 @@ public class CourseServiceImp implements CourseService{
     public synchronized int addCourseSectionClass(int sectionId, int instructorId, DayOfWeek dayOfWeek, List<Short> weekList, short classStart, short classEnd, String location) {
         try(
                 Connection conn=SQLDataSource.getInstance().getSQLConnection();
+                PreparedStatement instrExiPtmt=conn.prepareStatement("select * from instructor where instructorId=?");
                 PreparedStatement getSectionSemsterIdPtmt=conn.prepareStatement("select semesterid from section where sectionid=?");
                 PreparedStatement idptmt=conn.prepareStatement("select nextval('class_classid_seq')");
                 PreparedStatement insptmt=conn.prepareStatement("insert into class" +
@@ -240,6 +241,16 @@ public class CourseServiceImp implements CourseService{
             if (semesterid==-1){
                 throw new IntegrityViolationException();
             }
+            boolean instrExi=false;
+            instrExiPtmt.setInt(1,instructorId);
+            ResultSet set=instrExiPtmt.executeQuery();
+            while (set.next()){
+                instrExi=set.getBoolean(1);
+            }
+            if (!instrExi){
+                throw new IntegrityViolationException();
+            }
+
             int weekListInt=MultiChooseIntGenerator.weekIntGenerator(weekList);
             int classTimeInt=MultiChooseIntGenerator.classTimeIntGenerator(classStart,classEnd);
             executeNoCoincidencePtmt.setInt(1,instructorId);
@@ -601,7 +612,68 @@ public class CourseServiceImp implements CourseService{
 
     @Override
     public List<Student> getEnrolledStudentsInSemester(String courseId, int semesterId) {
-        return null;
+        try(
+                Connection conn=SQLDataSource.getInstance().getSQLConnection();
+                PreparedStatement getEnrolledStudentPtmt=conn.prepareStatement(
+                        "select studentId,firstName,lastName,enrolledDate,majorId,majorName,departmentId,departmentName\n" +
+                        "from(\n" +
+                        "    select *\n" +
+                        "    from (\n" +
+                        "            select *\n" +
+                        "            from course\n" +
+                        "            where courseId=?\n" +
+                        "         ) theCourse natural join section\n" +
+                        "    where semesterId=?\n" +
+                        "    ) theSections natural join enroll natural join student natural join major natural join department");
+                PreparedStatement courseExiPtmt=conn.prepareStatement("select exists(select * from course where courseId=?)");
+                PreparedStatement semesterExiPtmt=conn.prepareStatement("select exists(select * from section where sectionId=?)");
+                )
+        {
+                boolean courseExi=false;
+                courseExiPtmt.setString(1,courseId);
+                ResultSet set=courseExiPtmt.executeQuery();
+                while (set.next()){
+                    courseExi=set.getBoolean(1);
+                }
+                if (!courseExi){
+                    throw new EntityNotFoundException();
+                }
+
+                boolean semesterExi=false;
+                semesterExiPtmt.setInt(1,semesterId);
+                set=semesterExiPtmt.executeQuery();;
+                while (set.next()){
+                    semesterExi=set.getBoolean(1);
+                }
+                if (!semesterExi){
+                    throw new EntityNotFoundException();
+                }
+
+                ArrayList<Student> list=new ArrayList<>();
+                getEnrolledStudentPtmt.setString(1,courseId);
+                getEnrolledStudentPtmt.setInt(2,semesterId);
+                set=getEnrolledStudentPtmt.executeQuery();
+                while (set.next()){
+                    Student stu=new Student();
+                    Major ma=new Major();
+                    Department dep=new Department();
+                    stu.id=set.getInt("studentId");
+                    stu.fullName=UserServiceImp.getFullName(set.getString("firstName"),set.getString("lastName"));
+                    stu.enrolledDate=set.getDate("enrolledDate");
+                    ma.id=set.getInt("majorId");
+                    ma.name=set.getString("majorName");
+                    dep.id=set.getInt("departmentId");
+                    dep.name=set.getString("departmentName");
+                    ma.department=dep;
+                    stu.major=ma;
+                    list.add(stu);
+                }
+                return list;
+        }
+        catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return List.of();
     }
 
 
@@ -625,6 +697,12 @@ public class CourseServiceImp implements CourseService{
         Prerequisite LUL=new OrPrerequisite(List.of(new OrPrerequisite(List.of(new CoursePrerequisite("I"),new CoursePrerequisite("F"))),
                 new AndPrerequisite(List.of(new CoursePrerequisite("K")))));
         CourseServiceImp imp=new CourseServiceImp();
+
+        List<Student> list=null;
+        list=imp.getEnrolledStudentsInSemester("Ifdsf",3);
+        for (Student s:list){
+            System.out.println(s.fullName+" "+s.id+" "+s.enrolledDate+" "+s.major.id+" "+s.major.name+" "+s.major.department.id+" "+s.major.department.name);
+        }
 
         //imp.addCourseSectionClass(2,101,DayOfWeek.SUNDAY,List.of(a,b),a,b,"A");
 //        imp.addCourseSectionClass(3,102,DayOfWeek.SUNDAY,List.of(b,d),a,b,"B");

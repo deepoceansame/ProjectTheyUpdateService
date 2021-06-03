@@ -1,11 +1,14 @@
 package implementingServiceByTXY;
 
 import cn.edu.sustech.cs307.database.SQLDataSource;
+import cn.edu.sustech.cs307.dto.Course;
+import cn.edu.sustech.cs307.dto.CourseSection;
 import cn.edu.sustech.cs307.dto.Semester;
 import cn.edu.sustech.cs307.exception.EntityNotFoundException;
 import cn.edu.sustech.cs307.exception.IntegrityViolationException;
 import cn.edu.sustech.cs307.service.SemesterService;
 
+import javax.swing.text.StyleContext;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -20,9 +23,21 @@ public class SemesterServiceImp implements SemesterService {
                        "values(?,?,?)");
                PreparedStatement idptmt=conn.prepareStatement("select nextval('semester_semesterid_seq')");
                PreparedStatement setptmt=conn.prepareStatement("select setval('semester_semesterid_seq',?)");
+               PreparedStatement noSemesterOverlapPtmt=conn.prepareStatement("select not exists(select null from semester where not (semBegin>? or semEnd<?)  )")
                )
        {
             if (end.before(begin)){
+                throw new IntegrityViolationException();
+            }
+
+            boolean noOverlap=false;
+            noSemesterOverlapPtmt.setDate(1,end);
+            noSemesterOverlapPtmt.setDate(2,begin);
+            ResultSet set=noSemesterOverlapPtmt.executeQuery();
+            while (set.next()){
+                noOverlap=set.getBoolean(1);
+            }
+            if (!noOverlap){
                 throw new IntegrityViolationException();
             }
             addSemesterPtmt.setString(1,name);
@@ -143,7 +158,20 @@ public class SemesterServiceImp implements SemesterService {
         for (Semester s:list){
             System.out.println(s.name);
         }*/
-        Semester s=aimp.getSemester(5);
-        System.out.println(s.name);
+//        System.out.println(aimp.addSemester("s4",new Date(10,3,1),
+//                new Date(11,9,3)));
+
+
+        /*List<Semester> list=aimp.getAllSemesters();
+        for (Semester s:list){
+            System.out.println(   (s.end.getTime()-s.begin.getTime())/1000/3600/24 );
+            System.out.println(s.end.getDate());
+        }*/
+
+//       aimp.addSemester("lop",new Date(15,1,1),new Date(16,1,1));
+//        CourseServiceImp cimp=new CourseServiceImp();
+//        cimp.addCourseSection("F",5,"fsec",100);
+
+        aimp.removeSemester(5);
     }
 }
