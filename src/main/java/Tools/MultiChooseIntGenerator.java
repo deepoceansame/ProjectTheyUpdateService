@@ -16,9 +16,10 @@ public class MultiChooseIntGenerator {
         short i=9;
         short j=10;
         short k=11;
+        short z=20;
         List<Short> list=List.of(a,b,c,d,e,f,g,h);
         System.out.println(weekIntGenerator(list));
-        System.out.println(classTimeIntGenerator(a,c));
+        System.out.println(classTimeIntGenerator(z,z));
     }
 
     public static int weekIntGenerator(List<Short> weekList){

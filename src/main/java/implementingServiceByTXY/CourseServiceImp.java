@@ -217,7 +217,7 @@ public class CourseServiceImp implements CourseService{
     public synchronized int addCourseSectionClass(int sectionId, int instructorId, DayOfWeek dayOfWeek, List<Short> weekList, short classStart, short classEnd, String location) {
         try(
                 Connection conn=SQLDataSource.getInstance().getSQLConnection();
-                PreparedStatement instrExiPtmt=conn.prepareStatement("select * from instructor where instructorId=?");
+                PreparedStatement instrExiPtmt=conn.prepareStatement("select exists( select * from instructor where instructorId=?)");
                 PreparedStatement getSectionSemsterIdPtmt=conn.prepareStatement("select semesterid from section where sectionid=?");
                 PreparedStatement idptmt=conn.prepareStatement("select nextval('class_classid_seq')");
                 PreparedStatement insptmt=conn.prepareStatement("insert into class" +
@@ -698,14 +698,25 @@ public class CourseServiceImp implements CourseService{
                 new AndPrerequisite(List.of(new CoursePrerequisite("K")))));
         CourseServiceImp imp=new CourseServiceImp();
 
-        List<Student> list=null;
+      /*  imp.addCourseSection("I",1,"I1",100);
+        imp.addCourseSection("J",1,"J1",100);
+        imp.addCourseSection("K",1,"K1",100);
+        imp.addCourseSection("L",1,"L1",100);
+        imp.addCourseSection("H",1,"H1",100);
+        imp.addCourseSection("D",1,"D1",100);
+        imp.addCourseSection("F",1,"F1",100);
+        imp.addCourseSection("JIM",1,"JIM1",100);
+*/
+
+        imp.addCourseSectionClass(1,101,DayOfWeek.SUNDAY,List.of(a,b),a,b,"A");
+        imp.addCourseSectionClass(2,102,DayOfWeek.SUNDAY,List.of(b,d),a,b,"B");
+     /*   List<Student> list=null;
         list=imp.getEnrolledStudentsInSemester("Ifdsf",3);
         for (Student s:list){
             System.out.println(s.fullName+" "+s.id+" "+s.enrolledDate+" "+s.major.id+" "+s.major.name+" "+s.major.department.id+" "+s.major.department.name);
-        }
+        }*/
 
-        //imp.addCourseSectionClass(2,101,DayOfWeek.SUNDAY,List.of(a,b),a,b,"A");
-//        imp.addCourseSectionClass(3,102,DayOfWeek.SUNDAY,List.of(b,d),a,b,"B");
+
 //        imp.addCourse("LUL","LUL",1,1, Course.CourseGrading.PASS_OR_FAIL,
 //        LUL);
 
@@ -713,7 +724,8 @@ public class CourseServiceImp implements CourseService{
 //        imp.addCourseSectionClass(4,101,DayOfWeek.SATURDAY,List.of(g,h),g,h,"A");
 //        imp.addCourseSectionClass(4,102,DayOfWeek.SUNDAY,List.of(f,g),f,g,"B");
 
-       /* imp.addCourse("I","I",1,1, Course.CourseGrading.HUNDRED_MARK_SCORE
+
+/*        imp.addCourse("I","I",1,1, Course.CourseGrading.HUNDRED_MARK_SCORE
             ,null);
         imp.addCourse("J","J",1,1, Course.CourseGrading.HUNDRED_MARK_SCORE
                 ,null);
@@ -724,9 +736,9 @@ public class CourseServiceImp implements CourseService{
         imp.addCourse("H","H",1,1, Course.CourseGrading.HUNDRED_MARK_SCORE
                 ,null);
         imp.addCourse("D","D",1,1, Course.CourseGrading.HUNDRED_MARK_SCORE
-                ,null);*/
+                ,null);
 
-        /*imp.addCourse("F","F",1,1, Course.CourseGrading.HUNDRED_MARK_SCORE
+        imp.addCourse("F","F",1,1, Course.CourseGrading.HUNDRED_MARK_SCORE
                 ,null);
         imp.addCourse("JIM","JIM",1,1, Course.CourseGrading.PASS_OR_FAIL
         ,KDK);*/

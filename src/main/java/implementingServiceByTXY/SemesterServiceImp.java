@@ -152,12 +152,12 @@ public class SemesterServiceImp implements SemesterService {
 
     public static void main(String[] args) {
         SemesterServiceImp aimp=new SemesterServiceImp();
-        /*aimp.addSemester("x1",new Date(123),new Date(123113));
-        aimp.addSemester("x2",new Date(123),new Date(123192019));
+       aimp.addSemester("x1",new Date(123),new Date(123113));
+        aimp.addSemester("x2",new Date(1443534534),new Date(1731920139));
         List<Semester> list=aimp.getAllSemesters();
         for (Semester s:list){
             System.out.println(s.name);
-        }*/
+        }
 //        System.out.println(aimp.addSemester("s4",new Date(10,3,1),
 //                new Date(11,9,3)));
 
@@ -172,6 +172,6 @@ public class SemesterServiceImp implements SemesterService {
 //        CourseServiceImp cimp=new CourseServiceImp();
 //        cimp.addCourseSection("F",5,"fsec",100);
 
-        aimp.removeSemester(5);
+//        aimp.removeSemester(5);
     }
 }

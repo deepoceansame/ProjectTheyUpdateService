@@ -1,5 +1,7 @@
 package implementingServiceByTXY;
 
+import Tools.IntTox;
+import Tools.MultiChooseIntGenerator;
 import cn.edu.sustech.cs307.database.SQLDataSource;
 import cn.edu.sustech.cs307.dto.*;
 import cn.edu.sustech.cs307.dto.grade.Grade;
@@ -40,23 +42,225 @@ public class StudentServiceImp implements StudentService {
         }
         catch (SQLException e){
             e.printStackTrace();
+            throw new IntegrityViolationException();
         }
 
     }
+
+
+    public static String searchCourseSQL="select sectionId\n" +
+            "                            from(\n" +
+            "                                select *\n" +
+            "                                from(\n" +
+            "                                    select secTocous.sectionId, semesterId, sectionName, totalCapacity, leftCapacity, courseId, courseName, credit, classHour, courseGrading, pre, preId, classId, dayOfWeek, weekList, classTime, location\n" +
+            "                                    from\n" +
+            "                                    (\n" +
+            "                                        select *\n" +
+            "                                        from\n" +
+            "                                            (\n" +
+            "                                                select *\n" +
+            "                                                from section\n" +
+            "                                                where (semesterId=?) and \n" +  //--1 1
+            "                                                    (leftCapacity>0 or ?) and \n" + //--1 2
+            "                                                    ( noconfclass(sectionId,?) or ? ) and\n" + // --2 3,4
+            "                                                    (not hasPassed(sectionId,?) or ?) \n" + //--2 5,6
+            "                                            ) as secs natural join\n" +
+            "                                            (\n" +
+            "                                                select *\n" +
+            "                                                from course\n" +
+            "                                                where (getans(preId,?) or ?) and\n" + // --2 7,8
+            "                                                (isCompulsory(courseId,?) or ?) and \n" + //--2 9,10
+            "                                                (isElective(courseId,?) or ?) and \n" + //--2  11,12
+            "                                                (isCross(courseId,?) or ?) and \n" + //--2 13,14
+            "                                                (isPublic(courseId) or ?) and\n" + // --1 15
+            "                                                (courseId like '%'||?||'%' or ?)\n" + //--2 16,17
+            "                                            ) as cous\n" +
+            "                                        where ( (courseName||'['||sectionName||']') like '%'||?||'%' or ? ) \n" + // --2 18,19
+            "                                    ) as secTocous left outer join class on secTocous.sectionId=class.sectionId\n" +
+            "                                    where ((dayOfWeek=? or ?) and                        \n" + // --2 20,21
+            "                                          (?&classTime!=0 or ?) and                     \n" +  //--2 22,23
+            "                                          (location=any (?) or ?) )  or (classId is null and ?)\n" + //--3 24,25,26
+            "                                ) as secToclas\n" +
+            "                                    left outer join teach on teach.classId=secToclas.classId\n" +
+            "                            ) as secToteach left outer join instructor on secToteach.instructorId=instructor.instructorId\n" +
+            "                            where ( (firstName like ?||'%' or lastName like ?||'%' or firstName||lastName like ?||'%' or firstName||' '||lastName like ?||'%')   or ?  ) or (instructor.instructorId is null and ?)\n" +
+            "                            group by sectionId\n" +
+            "                            limit ?\n" +
+            "                            offset ?;";
+
+
+    public static String getConflictSectionSQL="select courseName,sectionName\n" +
+            "from (\n" +
+            "        select *\n" +
+            "        from enroll\n" +
+            "        where grade=-3 and studentId=?\n" +
+            "         ) as sectionTaken natural join section natural join course\n" +
+            "where exists(\n" +
+            "        select *\n" +
+            "        from(\n" +
+            "                select class.*,section.courseId,section.semesterId\n" +
+            "                from class natural join section\n" +
+            "                where class.sectionId=sectionTaken.sectionId\n" +
+            "            ) as classOfTakenSec\n" +
+            "            join\n" +
+            "            (\n" +
+            "                select class.*,section.courseId,section.semesterId\n" +
+            "                from class natural join section\n" +
+            "                where class.sectionId=?\n" +
+            "            ) as classOftheSec on true\n" +
+            "        where classOfTakenSec.courseId=classOftheSec.courseId or (classOfTakenSec.semesterId=classOftheSec.semesterId and classOfTakenSec.dayOfWeek=classOftheSec.dayOfWeek and\n" +
+            "                                                                  classOfTakenSec.weekList&classOftheSec.weekList!=0 and  classOfTakenSec.classTime &classOftheSec.classTime!=0)\n" +
+            "          ) or courseId=(select courseId from section where sectionId=?)::varchar;";
 
     @Override
     public synchronized List<CourseSearchEntry> searchCourse(int studentId, int semesterId, @Nullable String searchCid, @Nullable String searchName, @Nullable String searchInstructor, @Nullable DayOfWeek searchDayOfWeek, @Nullable Short searchClassTime, @Nullable List<String> searchClassLocations, CourseType searchCourseType, boolean ignoreFull, boolean ignoreConflict, boolean ignorePassed, boolean ignoreMissingPrerequisites, int pageSize, int pageIndex) {
         try(
                 Connection conn=SQLDataSource.getInstance().getSQLConnection();
-                PreparedStatement ptmt=conn.prepareStatement("");
+                PreparedStatement searchCoursePtmt=conn.prepareStatement(searchCourseSQL);
+                PreparedStatement getCourseBySectionIdPtmt=conn.prepareStatement("select * from (select courseId from section where sectionId=?) as theSec natural join course");
+                PreparedStatement getSectionPtmt=conn.prepareStatement("select * from section where sectionId=?");
+                PreparedStatement getClassesPtmt=conn.prepareStatement("select * from class natural join teach natural join instructor where sectionId=?");
+                PreparedStatement getConflictSectionPtmt=conn.prepareStatement(getConflictSectionSQL);
                 )
         {
+            searchCoursePtmt.setInt(1,semesterId);
 
+            searchCoursePtmt.setBoolean(2, ignoreFull);
+
+            searchCoursePtmt.setInt(3,studentId);
+            searchCoursePtmt.setBoolean(4, ignoreConflict);
+
+            searchCoursePtmt.setInt(5,studentId);
+            searchCoursePtmt.setBoolean(6,ignorePassed);
+
+            searchCoursePtmt.setInt(7,studentId);
+            searchCoursePtmt.setBoolean(8,ignoreMissingPrerequisites);
+
+            searchCoursePtmt.setInt(9,studentId);
+            searchCoursePtmt.setBoolean(10,!searchCourseType.equals(CourseType.MAJOR_COMPULSORY));
+
+            searchCoursePtmt.setInt(11,studentId);
+            searchCoursePtmt.setBoolean(12,!searchCourseType.equals(CourseType.MAJOR_ELECTIVE));
+
+            searchCoursePtmt.setInt(13,studentId);
+            searchCoursePtmt.setBoolean(14,!searchCourseType.equals(CourseType.CROSS_MAJOR));
+
+            searchCoursePtmt.setBoolean(15,!searchCourseType.equals(CourseType.PUBLIC));
+
+            searchCoursePtmt.setString(16, Objects.requireNonNullElse(searchCid, "fdsdf"));
+            searchCoursePtmt.setBoolean(17,searchCid==null);
+
+            searchCoursePtmt.setString(18,Objects.requireNonNullElse(searchName, "fdsdf"));
+            searchCoursePtmt.setBoolean(19,searchName==null);
+
+            int sdayOfWeek=0;
+            if (searchDayOfWeek==null){
+                sdayOfWeek=8;
+            }
+            else{
+                sdayOfWeek=searchDayOfWeek.getValue();
+            }
+            searchCoursePtmt.setInt(20,sdayOfWeek);
+            searchCoursePtmt.setBoolean(21,searchDayOfWeek==null);
+
+            short sclassTime=0;
+            sclassTime = Objects.requireNonNullElse(searchClassTime, (short)20);
+            searchCoursePtmt.setInt(22, MultiChooseIntGenerator.classTimeIntGenerator(sclassTime,sclassTime));
+            searchCoursePtmt.setBoolean(23,searchClassTime==null);
+
+            List<String> sLocationList=Objects.requireNonNullElse(searchClassLocations,List.of("popj"));
+            Array locationArr=conn.createArrayOf("varchar",sLocationList.toArray());
+            searchCoursePtmt.setArray(24,locationArr);
+            searchCoursePtmt.setBoolean(25,searchClassLocations==null);
+            searchCoursePtmt.setBoolean(26,searchDayOfWeek==null&&searchClassTime==null&&searchClassLocations==null);
+
+            String sInsName=Objects.requireNonNullElse(searchInstructor,">");
+            searchCoursePtmt.setString(27,sInsName);
+            searchCoursePtmt.setString(28,sInsName);
+            searchCoursePtmt.setString(29,sInsName);
+            searchCoursePtmt.setString(30,sInsName);
+            searchCoursePtmt.setBoolean(31,searchInstructor==null);
+            searchCoursePtmt.setBoolean(32,searchInstructor==null);
+
+            searchCoursePtmt.setInt(33,pageSize);
+            searchCoursePtmt.setInt(34,pageSize*pageIndex);
+
+            ResultSet set=searchCoursePtmt.executeQuery();
+            ArrayList<Integer> secs=new ArrayList<>();
+            while (set.next()){
+                secs.add(set.getInt(1));
+            }
+
+            ArrayList<CourseSearchEntry> entrys=new ArrayList<>();
+            for (Integer secid:secs){
+                int grameth=0;
+                CourseSearchEntry entr=new CourseSearchEntry();
+                Course cou=new Course();
+                CourseSection sect=new CourseSection();
+                ArrayList<CourseSectionClass> clas=new ArrayList<>();
+                ArrayList<String> conc=new ArrayList<>();
+                getCourseBySectionIdPtmt.setInt(1,secid);
+                set=getCourseBySectionIdPtmt.executeQuery();
+                while (set.next()){
+                    cou.id=set.getString("courseId");
+                    cou.name=set.getString("courseName");
+                    cou.credit=set.getInt("credit");
+                    cou.classHour=set.getInt("classHour");
+                    grameth=set.getInt("courseGrading");
+                    if (grameth==1){
+                        cou.grading= Course.CourseGrading.PASS_OR_FAIL;
+                    }
+                    else {
+                        cou.grading= Course.CourseGrading.HUNDRED_MARK_SCORE;
+                    }
+                }
+
+                getSectionPtmt.setInt(1,secid);
+                set=getSectionPtmt.executeQuery();
+                while (set.next()){
+                    sect.id=secid;
+                    sect.name=set.getString("sectionName");
+                    sect.totalCapacity=set.getInt("totalCapacity");
+                    sect.leftCapacity=set.getInt("leftCapacity");
+                }
+
+                getClassesPtmt.setInt(1,secid);
+                set=getClassesPtmt.executeQuery();
+                while (set.next()){
+                    CourseSectionClass cas=new CourseSectionClass();
+                    Instructor ins=new Instructor();
+                    cas.id=set.getInt("classId");
+                    cas.dayOfWeek=DayOfWeek.of(set.getInt("dayOfWeek"));
+                    cas.weekList= IntTox.intToList(set.getInt("weekList"));
+                    cas.classBegin=IntTox.getBegin(set.getInt("classTime"));
+                    cas.classEnd=IntTox.getEnd(set.getInt("classTime"));
+                    cas.location=set.getString("location");
+                    ins.id=set.getInt("instructorId");
+                    ins.fullName=UserServiceImp.getFullName(set.getString("firstName"),set.getString("lastName"));
+                    cas.instructor=ins;
+                    clas.add(cas);
+                }
+
+                getConflictSectionPtmt.setInt(1,studentId);
+                getConflictSectionPtmt.setInt(2,secid);
+                getConflictSectionPtmt.setInt(3,secid);
+                set=getConflictSectionPtmt.executeQuery();
+                while (set.next()){
+                    conc.add(String.format("%s[%s]",set.getString("courseName"),set.getString("sectionName")));
+                }
+
+                entr.course=cou;
+                entr.section=sect;
+                entr.sectionClasses=clas;
+                entr.conflictCourseNames=conc;
+                entrys.add(entr);
+            }
+            return entrys;
         }
         catch (SQLException e) {
             e.printStackTrace();
         }
-        return null;
+        return List.of();
     }
 
     @Override
@@ -68,7 +272,7 @@ public class StudentServiceImp implements StudentService {
                 PreparedStatement studentExiPtmt=conn.prepareStatement("select exists(select studentId from student where studentId=?)");
             PreparedStatement sectionExiPtmt=conn.prepareStatement("select exists(select sectionId from section where sectionId=?)");
             PreparedStatement alePtmt=conn.prepareStatement("select exists(select sectionId from enroll " +
-                    "where studentId=? and courseId=? and grade=-3 )");
+                    "where studentId=? and sectionId=? and not (grade=-1 or grade>=60) )");
             PreparedStatement alpPtmt=conn.prepareStatement("select exists(select * " +
                     "from courseGrade where studentId=? and courseId=? and (grade=-1 or grade>=60))");
             PreparedStatement executeNoConfClassPtmt=conn.prepareStatement("select NoConfClass(?,?)");
@@ -330,7 +534,7 @@ public class StudentServiceImp implements StudentService {
                 while (set.next()){
                     nowgra=set.getInt(1);
                 }
-                if (mark>nowgra){
+                if (true){
                     setCourseGradePtmt.setInt(1,mark);
                     setCourseGradePtmt.setInt(2,studentId);
                     setCourseGradePtmt.setString(3,courseId);
@@ -435,7 +639,7 @@ public class StudentServiceImp implements StudentService {
                 while (set.next()){
                     nowgra=set.getInt(1);
                 }
-                if (insertMark>nowgra){
+                if (true){
                     setCourseGradePtmt.setInt(1,insertMark);
                     setCourseGradePtmt.setInt(2,studentId);
                     setCourseGradePtmt.setString(3,courseId);
@@ -719,7 +923,7 @@ public class StudentServiceImp implements StudentService {
 
     public static void main(String[] args) {
         StudentServiceImp simp=new StudentServiceImp();
-//        simp.addStudent(666,1,"Tang","Xinyu",new Date(2021,1,1));
+//        simp.addStudent(666,2,"Tang","Xinyu",new Date(2021,1,1));
 
 //        Major ma=simp.getStudentMajor(666);
 //        System.out.println(ma.id+" "+ma.name+" "+ma.department.id+" "+ma.department.name);
@@ -768,10 +972,8 @@ public class StudentServiceImp implements StudentService {
                 PreparedStatement isinPtmt=conn.prepareStatement(" select 'ace' = any(?)  ")
                 )
         {
-            String[] ss=new String[2];
-            ss[0]="acre";
-            ss[1]="ttt";
-            Array arr=conn.createArrayOf("varchar",ss);
+            List<String> list=List.of("jio","ace","dsd","dsd");
+            Array arr=conn.createArrayOf("varchar",list.toArray());
             isinPtmt.setArray(1,arr);
             ResultSet set=isinPtmt.executeQuery();
             while (set.next()){
@@ -784,6 +986,40 @@ public class StudentServiceImp implements StudentService {
         }*/
 
 
-       simp.addEnrolledCourseWithGrade(666,17,PassOrFailGrade.FAIL);
+        List<CourseSearchEntry> list=simp.searchCourse(666,1,null,
+                null,null,null,
+                null,null,CourseType.ALL,true,true,true,false,20,0);
+        int a=0;
+
+
+/*
+        System.out.println(simp.enrollCourse(666,18));
+        simp.setEnrolledCourseGrade(666,18,new HundredMarkGrade(s));
+        simp.setEnrolledCourseGrade(666,20,new HundredMarkGrade(s));
+        simp.setEnrolledCourseGrade(666,21,new HundredMarkGrade(s));
+        simp.setEnrolledCourseGrade(666,22,new HundredMarkGrade(s));
+        simp.setEnrolledCourseGrade(666,23,new HundredMarkGrade(s));
+        simp.setEnrolledCourseGrade(666,24,new HundredMarkGrade(s));*/
+//        System.out.println(simp.passedPrerequisitesForCourse(666,"JIM"));
+
+
+       /* System.out.println(simp.enrollCourse(666,3));
+        System.out.println(simp.enrollCourse(666,4));
+        System.out.println(simp.enrollCourse(666,6));*/
+
+  /*      simp.setEnrolledCourseGrade(666,1,new HundredMarkGrade(g));
+        simp.setEnrolledCourseGrade(666,3,new HundredMarkGrade(g));
+        simp.setEnrolledCourseGrade(666,4,new HundredMarkGrade(g));
+        simp.setEnrolledCourseGrade(666,6,new HundredMarkGrade(g));*/
+
+
+//        System.out.println(simp.passedPrerequisitesForCourse(666,"JIM"));
+ /*       System.out.println(simp.enrollCourse(666,3));
+        System.out.println(simp.enrollCourse(666,4));
+        System.out.println(simp.enrollCourse(666,6));*/
+//        System.out.println(simp.enrollCourse(666,7));
+
+//        simp.setEnrolledCourseGrade(666,7,new HundredMarkGrade(g));
+
     }
 }

@@ -4,6 +4,7 @@ import cn.edu.sustech.cs307.database.SQLDataSource;
 import cn.edu.sustech.cs307.dto.Course;
 import cn.edu.sustech.cs307.dto.CourseSection;
 import cn.edu.sustech.cs307.exception.EntityNotFoundException;
+import cn.edu.sustech.cs307.exception.IntegrityViolationException;
 import cn.edu.sustech.cs307.service.InstructorService;
 
 import javax.print.attribute.standard.ReferenceUriSchemesSupported;
@@ -35,6 +36,7 @@ public class InstructorServiceImp implements InstructorService {
         }
         catch (SQLException e){
             e.printStackTrace();
+            throw new IntegrityViolationException();
         }
     }
 
@@ -95,8 +97,8 @@ public class InstructorServiceImp implements InstructorService {
 
     public static void main(String[] args) {
         InstructorServiceImp imp=new InstructorServiceImp();
-//        imp.addInstructor(110,"Kate","Yang");
-//        imp.addInstructor(111,"张","三");
+        imp.addInstructor(101,"Kate","Yang");
+        imp.addInstructor(102,"张","三");
         List<CourseSection> list=imp.getInstructedCourseSections(103,1);
         for (CourseSection s:list){
             System.out.println(s.id+" "+s.name+" "+s.leftCapacity+" "+s.totalCapacity);

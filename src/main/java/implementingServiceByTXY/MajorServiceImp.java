@@ -176,10 +176,10 @@ public class MajorServiceImp implements MajorService {
 
     public static void main(String[] args) {
         MajorServiceImp imp=new MajorServiceImp();
-        imp.addMajor("火焰魔法",1);
+/*        imp.addMajor("火焰魔法",1);
         imp.addMajor("黑魔法",1);
         imp.addMajor("治疗魔法",1);
-      /*  List<Major> list=imp.getAllMajors();
+        List<Major> list=imp.getAllMajors();
         for (Major a:list){
             System.out.println(a.id+" "+a.name+" "+a.department.id+" "+a.department.name);
         }
@@ -187,15 +187,18 @@ public class MajorServiceImp implements MajorService {
         Major b=imp.getMajor(3);
         System.out.println(b.id+" "+b.name+" "+b.department.id+" "+b.department.name);*/
 
-        CourseServiceImp cimp=new CourseServiceImp();
+     /*   CourseServiceImp cimp=new CourseServiceImp();
         cimp.addCourse("MA1","火焰魔法导论",3,
                 16, Course.CourseGrading.HUNDRED_MARK_SCORE,null);
         cimp.addCourse("MA3","治疗魔法导论",3,
-                20, Course.CourseGrading.HUNDRED_MARK_SCORE,null);
+                20, Course.CourseGrading.HUNDRED_MARK_SCORE,null);*/
 
 
        /* cimp.addCourse("MA15","火焰魔法最高阶",2,
                 30, Course.CourseGrading.HUNDRED_MARK_SCORE,null);*/
-        imp.addMajorElectiveCourse(1,"MA3");
+       /* imp.addMajorElectiveCourse(1,"MA3");*/
+
+
+        imp.addMajorCompulsoryCourse(2,"H");
     }
 }
