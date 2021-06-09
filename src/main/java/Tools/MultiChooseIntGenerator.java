@@ -1,7 +1,9 @@
 package Tools;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class MultiChooseIntGenerator {
     public static void main(String[] args) {
@@ -17,12 +19,16 @@ public class MultiChooseIntGenerator {
         short j=10;
         short k=11;
         short z=20;
-        List<Short> list=List.of(a,b,c,d,e,f,g,h);
+        Set<Short> list=new HashSet<>();
+        list.add(a);
+        list.add(b);
+        list.add(c);
+        list.add(d);
         System.out.println(weekIntGenerator(list));
         System.out.println(classTimeIntGenerator(z,z));
     }
 
-    public static int weekIntGenerator(List<Short> weekList){
+    public static int weekIntGenerator(Set<Short> weekList){
         int ans=0;
         for (short a:weekList){
             ans+=Math.pow(2,a);

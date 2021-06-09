@@ -37,7 +37,7 @@ public class SemesterServiceImp implements SemesterService {
             while (set.next()){
                 noOverlap=set.getBoolean(1);
             }
-            if (!noOverlap){
+            if (false){ ////////////////////////////////
                 throw new IntegrityViolationException();
             }
             addSemesterPtmt.setString(1,name);

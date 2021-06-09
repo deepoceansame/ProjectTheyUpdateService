@@ -48,7 +48,10 @@ public class StudentServiceImp implements StudentService {
     }
 
 
-    public static String searchCourseSQL="select sectionId\n" +
+    public static String searchCourseSQL=
+            "                         select sectionId\n"+
+            "                         from(\n"+
+            "                            select sectionId\n" +
             "                            from(\n" +
             "                                select *\n" +
             "                                from(\n" +
@@ -85,6 +88,8 @@ public class StudentServiceImp implements StudentService {
             "                            ) as secToteach left outer join instructor on secToteach.instructorId=instructor.instructorId\n" +
             "                            where ( (firstName like ?||'%' or lastName like ?||'%' or firstName||lastName like ?||'%' or firstName||' '||lastName like ?||'%')   or ?  ) or (instructor.instructorId is null and ?)\n" +
             "                            group by sectionId\n" +
+            "                            ) secids natural join section natural join course\n"+
+            "                            order by courseName||'['||section.sectionName||']'\n"+
             "                            limit ?\n" +
             "                            offset ?;";
 
@@ -197,7 +202,7 @@ public class StudentServiceImp implements StudentService {
                 CourseSearchEntry entr=new CourseSearchEntry();
                 Course cou=new Course();
                 CourseSection sect=new CourseSection();
-                ArrayList<CourseSectionClass> clas=new ArrayList<>();
+                Set<CourseSectionClass> clas=new HashSet<>();
                 ArrayList<String> conc=new ArrayList<>();
                 getCourseBySectionIdPtmt.setInt(1,secid);
                 set=getCourseBySectionIdPtmt.executeQuery();
@@ -248,6 +253,7 @@ public class StudentServiceImp implements StudentService {
                 while (set.next()){
                     conc.add(String.format("%s[%s]",set.getString("courseName"),set.getString("sectionName")));
                 }
+                conc.sort(String::compareTo);
 
                 entr.course=cou;
                 entr.section=sect;
@@ -255,6 +261,7 @@ public class StudentServiceImp implements StudentService {
                 entr.conflictCourseNames=conc;
                 entrys.add(entr);
             }
+            entrys.sort(new CourseSearchEntryComp());
             return entrys;
         }
         catch (SQLException e) {
@@ -262,6 +269,17 @@ public class StudentServiceImp implements StudentService {
         }
         return List.of();
     }
+
+    public static class CourseSearchEntryComp implements Comparator<CourseSearchEntry>{
+
+        @Override
+        public int compare(CourseSearchEntry o1, CourseSearchEntry o2) {
+            String one=String.format("%s[%s]",o1.course.name,o1.section.name);
+            String two=String.format("%s[%s]",o2.course.name,o2.section.name);
+            return one.compareTo(two);
+        }
+    }
+
 
     @Override
     //COURSE_NOT_FOUND > ALREADY_ENROLLED > ALREADY_PASSED >
@@ -435,6 +453,9 @@ public class StudentServiceImp implements StudentService {
         }
         catch (SQLException e) {
             e.printStackTrace();
+        }
+        catch(EntityNotFoundException e){
+            return;
         }
     }
 
@@ -746,7 +767,7 @@ public class StudentServiceImp implements StudentService {
             CourseTable courseTable=new CourseTable();
             courseTable.table=new HashMap<>();
             for (int i=1;i<=7;i++){
-                courseTable.table.put(DayOfWeek.of(i),new ArrayList<>());
+                courseTable.table.put(DayOfWeek.of(i),new HashSet<>());
             }
             getSemesterByDatePtmt.setDate(1,date);
             getSemesterByDatePtmt.setDate(2,date);
@@ -759,8 +780,12 @@ public class StudentServiceImp implements StudentService {
                 sembe=set.getDate("semBegin");
                 semen=set.getDate("semEnd");
             }
+            if (semid==-1){
+                return courseTable;
+            }
             short theNthWeek=(short) ( (date.getTime()- sembe.getTime())/1000/3600/24/7+1  );
-            List<Short> weeklist=List.of(theNthWeek);
+            Set<Short> weeklist=new HashSet<>();
+            weeklist.add(theNthWeek);
             int weekInt=Tools.MultiChooseIntGenerator.weekIntGenerator(weeklist);
             getClassBeingTakenPtmt.setInt(1,studentId);
             getClassBeingTakenPtmt.setInt(2,semid);
@@ -796,7 +821,7 @@ public class StudentServiceImp implements StudentService {
         CourseTable courseTable=new CourseTable();
         courseTable.table=new HashMap<>();
         for (int i=1;i<=7;i++){
-            courseTable.table.put(DayOfWeek.of(i),new ArrayList<>());
+            courseTable.table.put(DayOfWeek.of(i),new HashSet<>());
         }
         return courseTable;
     }
@@ -936,6 +961,7 @@ public class StudentServiceImp implements StudentService {
 
         short s=40;
         short g=61;
+        short h=-3;
 //        simp.addEnrolledCourseWithGrade(666,11,PassOrFailGrade.PASS);
 //       simp.addEnrolledCourseWithGrade(666,8,new HundredMarkGrade(g));
 //       simp.addEnrolledCourseWithGrade(666,9,new HundredMarkGrade(g));
@@ -992,14 +1018,13 @@ public class StudentServiceImp implements StudentService {
         int a=0;
 
 
-/*
-        System.out.println(simp.enrollCourse(666,18));
-        simp.setEnrolledCourseGrade(666,18,new HundredMarkGrade(s));
-        simp.setEnrolledCourseGrade(666,20,new HundredMarkGrade(s));
-        simp.setEnrolledCourseGrade(666,21,new HundredMarkGrade(s));
-        simp.setEnrolledCourseGrade(666,22,new HundredMarkGrade(s));
-        simp.setEnrolledCourseGrade(666,23,new HundredMarkGrade(s));
-        simp.setEnrolledCourseGrade(666,24,new HundredMarkGrade(s));*/
+//        System.out.println(simp.enrollCourse(666,18));
+/*        simp.setEnrolledCourseGrade(666,1,new HundredMarkGrade(h));
+        simp.setEnrolledCourseGrade(666,3,new HundredMarkGrade(h));
+        simp.setEnrolledCourseGrade(666,4,new HundredMarkGrade(h));
+        simp.setEnrolledCourseGrade(666,6,new HundredMarkGrade(h));
+        simp.setEnrolledCourseGrade(666,7,new HundredMarkGrade(h));*/
+//        simp.setEnrolledCourseGrade(666,24,new HundredMarkGrade(h));
 //        System.out.println(simp.passedPrerequisitesForCourse(666,"JIM"));
 
 

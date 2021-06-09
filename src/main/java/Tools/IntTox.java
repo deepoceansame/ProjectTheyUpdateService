@@ -1,7 +1,9 @@
 package Tools;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class IntTox {
     public static void main(String[] args) {
@@ -24,9 +26,9 @@ public class IntTox {
         System.out.println(getEnd(aat));
     }
 
-    public static List<Short> intToList(int a){
+    public static Set<Short> intToList(int a){
         String bin=Integer.toBinaryString(a);
-        List<Short> list=new ArrayList<>();
+        Set<Short> list=new HashSet<>();
         for (int i=bin.length()-2;i>=0;i--){
             if (bin.charAt(i)=='1'){
                 list.add((short)(bin.length()-i-1));

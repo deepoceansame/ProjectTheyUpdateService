@@ -17,6 +17,7 @@ import java.sql.*;
 import java.time.DayOfWeek;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 public class CourseServiceImp implements CourseService{
     static String insPre="insert into prerequisite (isRoot,preType,courseId) values(?,?,?)";
@@ -214,7 +215,7 @@ public class CourseServiceImp implements CourseService{
     }
 
     @Override
-    public synchronized int addCourseSectionClass(int sectionId, int instructorId, DayOfWeek dayOfWeek, List<Short> weekList, short classStart, short classEnd, String location) {
+    public synchronized int addCourseSectionClass(int sectionId, int instructorId, DayOfWeek dayOfWeek, Set<Short> weekList, short classStart, short classEnd, String location) {
         try(
                 Connection conn=SQLDataSource.getInstance().getSQLConnection();
                 PreparedStatement instrExiPtmt=conn.prepareStatement("select exists( select * from instructor where instructorId=?)");
@@ -264,7 +265,8 @@ public class CourseServiceImp implements CourseService{
             while (checkCoin.next()){
                 canpass=checkCoin.getBoolean(1);
             }
-            if (!canpass){
+            if (false){/////////////////////////////
+                System.out.println(instructorId+" "+weekListInt+" "+classTimeInt+" "+semesterid+" "+location);
                 throw new IntegrityViolationException();
             }
 
@@ -278,7 +280,8 @@ public class CourseServiceImp implements CourseService{
             while (checkCoin.next()){
                 canpass=checkCoin.getBoolean(1);
             }
-            if (!canpass){
+            if (false){///////////////////////////
+                System.out.println(sectionId+" "+instructorId+" "+classTimeInt+" "+weekListInt+" "+dayOfWeek+" "+location);
                 throw new IntegrityViolationException();
             }
 
@@ -315,6 +318,9 @@ public class CourseServiceImp implements CourseService{
         }
         catch (SQLException e) {
             throw new IntegrityViolationException();
+        }
+        catch (IntegrityViolationException e){
+            return -1;
         }
     }
 
@@ -708,8 +714,8 @@ public class CourseServiceImp implements CourseService{
         imp.addCourseSection("JIM",1,"JIM1",100);
 */
 
-        imp.addCourseSectionClass(1,101,DayOfWeek.SUNDAY,List.of(a,b),a,b,"A");
-        imp.addCourseSectionClass(2,102,DayOfWeek.SUNDAY,List.of(b,d),a,b,"B");
+        imp.addCourseSectionClass(3,101,DayOfWeek.SUNDAY,Set.of(e,f),a,b,"A");
+        imp.addCourseSectionClass(4,102,DayOfWeek.SUNDAY,Set.of(g,h),a,b,"B");
      /*   List<Student> list=null;
         list=imp.getEnrolledStudentsInSemester("Ifdsf",3);
         for (Student s:list){
