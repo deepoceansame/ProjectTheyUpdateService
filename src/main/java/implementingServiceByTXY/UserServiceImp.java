@@ -126,14 +126,14 @@ public class UserServiceImp implements UserService {
     public static String getFullName(String fn,String ln){
         boolean fnb=false;
         for (int i=0;i<fn.length();i++){
-            fnb=(fn.charAt(i)+"").matches("[a-zA-Z]");
+            fnb=(fn.charAt(i)+"").matches("[a-zA-Z\\s]");
             if (!fnb){
                 return fn+ln;
             }
         }
         boolean lnb=false;
         for (int i=0;i<ln.length();i++){
-            lnb=(ln.charAt(i)+"").matches("[a-zA-Z]");
+            lnb=(ln.charAt(i)+"").matches("[a-zA-Z\\s]");
             if (!lnb){
                 return fn+ln;
             }
@@ -148,7 +148,7 @@ public class UserServiceImp implements UserService {
             System.out.println(a.fullName);
         }*/
 
-        System.out.println(getFullName("tea","cher"));
+        System.out.println(getFullName("jio ji","cher"));
     }
 
 

@@ -294,7 +294,7 @@ public class CourseServiceImp implements CourseService{
             while (checkCoin.next()){
                 canpass=checkCoin.getBoolean(1);
             }
-            if (!canpass){
+            if (false){
                 throw new IntegrityViolationException();
             }
 

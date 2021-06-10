@@ -10,7 +10,6 @@ import cn.edu.sustech.cs307.dto.grade.PassOrFailGrade;
 import cn.edu.sustech.cs307.exception.EntityNotFoundException;
 import cn.edu.sustech.cs307.exception.IntegrityViolationException;
 import cn.edu.sustech.cs307.service.StudentService;
-import org.postgresql.jdbc.PgArray;
 
 import javax.annotation.Nullable;
 import java.sql.*;
@@ -49,57 +48,61 @@ public class StudentServiceImp implements StudentService {
 
 
     public static String searchCourseSQL=
-            "                         select sectionId\n"+
-            "                         from(\n"+
-            "                            select sectionId\n" +
-            "                            from(\n" +
-            "                                select *\n" +
-            "                                from(\n" +
-            "                                    select secTocous.sectionId, semesterId, sectionName, totalCapacity, leftCapacity, courseId, courseName, credit, classHour, courseGrading, pre, preId, classId, dayOfWeek, weekList, classTime, location\n" +
-            "                                    from\n" +
-            "                                    (\n" +
-            "                                        select *\n" +
-            "                                        from\n" +
-            "                                            (\n" +
-            "                                                select *\n" +
-            "                                                from section\n" +
-            "                                                where (semesterId=?) and \n" +  //--1 1
-            "                                                    (leftCapacity>0 or ?) and \n" + //--1 2
-            "                                                    ( noconfclass(sectionId,?) or ? ) and\n" + // --2 3,4
-            "                                                    (not hasPassed(sectionId,?) or ?) \n" + //--2 5,6
-            "                                            ) as secs natural join\n" +
-            "                                            (\n" +
-            "                                                select *\n" +
-            "                                                from course\n" +
-            "                                                where (getans(preId,?) or ?) and\n" + // --2 7,8
-            "                                                (isCompulsory(courseId,?) or ?) and \n" + //--2 9,10
-            "                                                (isElective(courseId,?) or ?) and \n" + //--2  11,12
-            "                                                (isCross(courseId,?) or ?) and \n" + //--2 13,14
-            "                                                (isPublic(courseId) or ?) and\n" + // --1 15
-            "                                                (courseId like '%'||?||'%' or ?)\n" + //--2 16,17
-            "                                            ) as cous\n" +
-            "                                        where ( (courseName||'['||sectionName||']') like '%'||?||'%' or ? ) \n" + // --2 18,19
-            "                                    ) as secTocous left outer join class on secTocous.sectionId=class.sectionId\n" +
-            "                                    where ((dayOfWeek=? or ?) and                        \n" + // --2 20,21
-            "                                          (?&classTime!=0 or ?) and                     \n" +  //--2 22,23
-            "                                          (location=any (?) or ?) )  or (classId is null and ?)\n" + //--3 24,25,26
-            "                                ) as secToclas\n" +
-            "                                    left outer join teach on teach.classId=secToclas.classId\n" +
-            "                            ) as secToteach left outer join instructor on secToteach.instructorId=instructor.instructorId\n" +
-            "                            where ( (firstName like ?||'%' or lastName like ?||'%' or firstName||lastName like ?||'%' or firstName||' '||lastName like ?||'%')   or ?  ) or (instructor.instructorId is null and ?)\n" +
-            "                            group by sectionId\n" +
-            "                            ) secids natural join section natural join course\n"+
-            "                            order by courseName||'['||section.sectionName||']'\n"+
-            "                            limit ?\n" +
-            "                            offset ?;";
+                    "select sectionId\n" +
+                    "from(\n" +
+                    "    select sectionId\n" +
+                    "    from\n" +
+                    "        (\n" +
+                    "            select *\n" +
+                    "            from    (\n" +
+                    "                    select *\n" +
+                    "                    from section\n" +
+                    "                    where  (semesterId=?) and\n" +   //1
+                    "                            (leftCapacity>0 or ?) and\n" +  //2
+                    "                            ( noconfclass(sectionId,?) or ? ) and\n" + //3 4
+                    "                            (not hasPassed(sectionId,?) or ?)\n" + // 5 6
+                    "                    ) as sec\n" +
+                    "                    natural join\n" +
+                    "                    (\n" +
+                    "                        select *\n" +
+                    "                        from course\n" +
+                    "                        where (getans(preId,?) or ?) and\n" + // 7 8
+                    "                        (isCompulsory(courseId,?) or ?) and\n" +// 9 10
+                    "                        (isElective(courseId,?) or ?) and\n" +//11 12
+                    "                        (isCross(courseId,?) or ?) and\n" +//13 14
+                    "                        (isPublic(courseId) or ?) and\n" +//15
+                    "                        (courseId like '%'||?||'%' or ?)\n" +//16 17
+                    "                    ) as cou\n" +
+                    "            where ( (courseName||'['||sectionName||']') like '%'||?||'%' or ? )\n" + //18 19
+                    "        ) as secToCou\n" +
+                    "        natural join\n" +
+                    "        (\n" +
+                    "            select *\n" +
+                    "            from class\n" +
+                    "            where (dayOfWeek=? or ?) and\n" + //20,21
+                    "                  (?&classTime!=0 or ?) and\n" +// 22,23
+                    "                  (locationlikearr(location,?) or ?)" + //24,25
+                    "        ) as claz\n" +
+                    "        natural join teach natural join\n" +
+                    "        (\n" +
+                    "            select *\n" +
+                    "            from instructor\n" +
+                    "            where ( (firstName like ?||'%' or lastName like ?||'%' or firstName||lastName like ?||'%' or firstName||' '||lastName like ?||'%')   or ?  )\n" + //25 26 27 28 29
+                    "        ) as ins\n" +
+                    "    group by sectionId\n" +
+                    ") secid natural join section natural join course\n" +
+                    "order by courseId,courseName||'['||section.sectionName||']'\n" +
+                    "limit ?\n" + //30
+                    "offset ?;"; //31
+
 
 
     public static String getConflictSectionSQL="select courseName,sectionName\n" +
             "from (\n" +
             "        select *\n" +
-            "        from enroll\n" +
-            "        where grade=-3 and studentId=?\n" +
-            "         ) as sectionTaken natural join section natural join course\n" +
+            "        from enroll natural join section\n" +
+            "        where semesterId=? and studentId=?\n" +
+            "         ) as sectionTaken natural join course\n" +
             "where exists(\n" +
             "        select *\n" +
             "        from(\n" +
@@ -115,7 +118,7 @@ public class StudentServiceImp implements StudentService {
             "            ) as classOftheSec on true\n" +
             "        where classOfTakenSec.courseId=classOftheSec.courseId or (classOfTakenSec.semesterId=classOftheSec.semesterId and classOfTakenSec.dayOfWeek=classOftheSec.dayOfWeek and\n" +
             "                                                                  classOfTakenSec.weekList&classOftheSec.weekList!=0 and  classOfTakenSec.classTime &classOftheSec.classTime!=0)\n" +
-            "          ) or courseId=(select courseId from section where sectionId=?)::varchar;";
+            "          ) or (courseId=(select courseId from section where sectionId=?)::varchar and semesterId=(select semesterId from section where sectionId=?)::int);";
 
     @Override
     public synchronized List<CourseSearchEntry> searchCourse(int studentId, int semesterId, @Nullable String searchCid, @Nullable String searchName, @Nullable String searchInstructor, @Nullable DayOfWeek searchDayOfWeek, @Nullable Short searchClassTime, @Nullable List<String> searchClassLocations, CourseType searchCourseType, boolean ignoreFull, boolean ignoreConflict, boolean ignorePassed, boolean ignoreMissingPrerequisites, int pageSize, int pageIndex) {
@@ -130,16 +133,16 @@ public class StudentServiceImp implements StudentService {
         {
             searchCoursePtmt.setInt(1,semesterId);
 
-            searchCoursePtmt.setBoolean(2, ignoreFull);
+            searchCoursePtmt.setBoolean(2, !ignoreFull);
 
             searchCoursePtmt.setInt(3,studentId);
-            searchCoursePtmt.setBoolean(4, ignoreConflict);
+            searchCoursePtmt.setBoolean(4, !ignoreConflict);
 
             searchCoursePtmt.setInt(5,studentId);
-            searchCoursePtmt.setBoolean(6,ignorePassed);
+            searchCoursePtmt.setBoolean(6,!ignorePassed);
 
             searchCoursePtmt.setInt(7,studentId);
-            searchCoursePtmt.setBoolean(8,ignoreMissingPrerequisites);
+            searchCoursePtmt.setBoolean(8,!ignoreMissingPrerequisites);
 
             searchCoursePtmt.setInt(9,studentId);
             searchCoursePtmt.setBoolean(10,!searchCourseType.equals(CourseType.MAJOR_COMPULSORY));
@@ -177,18 +180,16 @@ public class StudentServiceImp implements StudentService {
             Array locationArr=conn.createArrayOf("varchar",sLocationList.toArray());
             searchCoursePtmt.setArray(24,locationArr);
             searchCoursePtmt.setBoolean(25,searchClassLocations==null);
-            searchCoursePtmt.setBoolean(26,searchDayOfWeek==null&&searchClassTime==null&&searchClassLocations==null);
 
             String sInsName=Objects.requireNonNullElse(searchInstructor,">");
+            searchCoursePtmt.setString(26,sInsName);
             searchCoursePtmt.setString(27,sInsName);
             searchCoursePtmt.setString(28,sInsName);
             searchCoursePtmt.setString(29,sInsName);
-            searchCoursePtmt.setString(30,sInsName);
-            searchCoursePtmt.setBoolean(31,searchInstructor==null);
-            searchCoursePtmt.setBoolean(32,searchInstructor==null);
+            searchCoursePtmt.setBoolean(30,searchInstructor==null);
 
-            searchCoursePtmt.setInt(33,pageSize);
-            searchCoursePtmt.setInt(34,pageSize*pageIndex);
+            searchCoursePtmt.setInt(31,pageSize);
+            searchCoursePtmt.setInt(32,pageSize*pageIndex);
 
             ResultSet set=searchCoursePtmt.executeQuery();
             ArrayList<Integer> secs=new ArrayList<>();
@@ -246,9 +247,11 @@ public class StudentServiceImp implements StudentService {
                     clas.add(cas);
                 }
 
-                getConflictSectionPtmt.setInt(1,studentId);
-                getConflictSectionPtmt.setInt(2,secid);
+                getConflictSectionPtmt.setInt(1,semesterId);
+                getConflictSectionPtmt.setInt(2,studentId);
                 getConflictSectionPtmt.setInt(3,secid);
+                getConflictSectionPtmt.setInt(4,secid);
+                getConflictSectionPtmt.setInt(5,secid);
                 set=getConflictSectionPtmt.executeQuery();
                 while (set.next()){
                     conc.add(String.format("%s[%s]",set.getString("courseName"),set.getString("sectionName")));
@@ -274,9 +277,14 @@ public class StudentServiceImp implements StudentService {
 
         @Override
         public int compare(CourseSearchEntry o1, CourseSearchEntry o2) {
-            String one=String.format("%s[%s]",o1.course.name,o1.section.name);
-            String two=String.format("%s[%s]",o2.course.name,o2.section.name);
-            return one.compareTo(two);
+            if (o1.course.id.compareTo(o2.course.id)!=0){
+                return o1.course.id.toUpperCase().compareTo(o2.course.id.toUpperCase());
+            }
+            else{
+                String one=String.format("%s[%s]",o1.course.name,o1.section.name);
+                String two=String.format("%s[%s]",o2.course.name,o2.section.name);
+                return one.compareTo(two);
+            }
         }
     }
 
@@ -290,7 +298,7 @@ public class StudentServiceImp implements StudentService {
                 PreparedStatement studentExiPtmt=conn.prepareStatement("select exists(select studentId from student where studentId=?)");
             PreparedStatement sectionExiPtmt=conn.prepareStatement("select exists(select sectionId from section where sectionId=?)");
             PreparedStatement alePtmt=conn.prepareStatement("select exists(select sectionId from enroll " +
-                    "where studentId=? and sectionId=? and not (grade=-1 or grade>=60) )");
+                    "where studentId=? and sectionId=?)");
             PreparedStatement alpPtmt=conn.prepareStatement("select exists(select * " +
                     "from courseGrade where studentId=? and courseId=? and (grade=-1 or grade>=60))");
             PreparedStatement executeNoConfClassPtmt=conn.prepareStatement("select NoConfClass(?,?)");
@@ -759,7 +767,7 @@ public class StudentServiceImp implements StudentService {
                         "from (\n" +
                         "     select *\n" +
                         "    from enroll\n" +
-                        "    where studentId=? and grade=-3\n" +
+                        "    where studentId=?\n" +
                         "         ) classTaken natural join section natural join class natural join course natural join teach natural join instructor\n" +
                         "where semesterId=? and weekList&?!=0");
                 )
@@ -784,6 +792,9 @@ public class StudentServiceImp implements StudentService {
                 return courseTable;
             }
             short theNthWeek=(short) ( (date.getTime()- sembe.getTime())/1000/3600/24/7+1  );
+            /*if ( ((date.getTime()- sembe.getTime())/1000/3600/24)%7==0){
+                theNthWeek-=1;
+            }*/
             Set<Short> weeklist=new HashSet<>();
             weeklist.add(theNthWeek);
             int weekInt=Tools.MultiChooseIntGenerator.weekIntGenerator(weeklist);
