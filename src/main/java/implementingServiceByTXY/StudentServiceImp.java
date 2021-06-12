@@ -468,7 +468,7 @@ public class StudentServiceImp implements StudentService {
     }
 
     @Override
-    public synchronized void addEnrolledCourseWithGrade(int studentId, int sectionId, @Nullable Grade grade) {
+    public void addEnrolledCourseWithGrade(int studentId, int sectionId, @Nullable Grade grade) {
         try(
                 Connection conn=SQLDataSource.getInstance().getSQLConnection();
                 PreparedStatement stuExiPtmt=conn.prepareStatement("select exists(select studentId from student where studentId=?)");
